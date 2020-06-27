@@ -1,0 +1,16 @@
+
+set(OUTPATH_SUFFIX "/Debug")
+
+if(OS_IS_WINDOWS)
+	set(BIN_PATH ${CMAKE_ROOT_DIR}/bin/win)
+	set(LIB_PATH ${CMAKE_ROOT_DIR}/lib/win)
+elseif(OS_IS_MACOS)
+	set(BIN_PATH ${CMAKE_ROOT_DIR}/bin/macos)
+	set(LIB_PATH ${CMAKE_ROOT_DIR}/lib/macos)
+elseif(OS_IS_IOS)
+	set(BIN_PATH ${CMAKE_ROOT_DIR}/bin/ios)
+	set(LIB_PATH ${CMAKE_ROOT_DIR}/lib/ios)
+else()
+	set(BIN_PATH ${CMAKE_ROOT_DIR}/bin/unkown${OUTPATH_SUFFIX})
+	set(LIB_PATH ${CMAKE_ROOT_DIR}/lib/unkown${OUTPATH_SUFFIX})
+endif()
