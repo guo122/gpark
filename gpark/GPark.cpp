@@ -41,7 +41,7 @@ void GPark::InitDB()
         
         _HomePath = _WorkPath;
         
-        _savedRoot = GFileMgr::LoadFromPath(_HomePath);
+        _savedRoot = GFileMgr::LoadFromPath(_HomePath.c_str());
 
         SaveDB(_savedRoot);
         
@@ -87,12 +87,12 @@ void GPark::Stats()
     {
         LoadDB();
         
-        GFile * nowFileRoot = GFileMgr::LoadFromPath(_WorkPath);
-        GFile * savedFileRoot = GFileMgr::GetFile(_savedRoot, nowFileRoot->FullPath());
+        GFile * nowFileRoot = GFileMgr::LoadFromPath(_WorkPath.c_str());
+        GFile * savedFileRoot = GFileMgr::GetFile(_savedRoot, nowFileRoot->FullPathUUID());
         
-        std::vector<GFile *> changesList, missList, addList;
+        std::vector<GFile *> changesList, missList, addList, detailAddList;
         
-        GFileMgr::DifferentFileList(savedFileRoot, nowFileRoot, changesList, missList, addList);
+        GFileMgr::DifferentFileList(savedFileRoot, nowFileRoot, changesList, missList, addList, detailAddList);
         
         for (int i = 0; i < changesList.size(); ++i)
         {
@@ -134,12 +134,12 @@ void GPark::Tree()
 {
     std::string treeStr;
     
-    GFileMgr::Tree(GFileMgr::LoadFromPath(_WorkPath), &treeStr);
+    GFileMgr::Tree(GFileMgr::LoadFromPath(_WorkPath.c_str()), &treeStr, false);
     
     std::cout << treeStr << std::endl;
 }
 
-void GPark::Show()
+void GPark::Show(bool bVerbose)
 {
     if (!_HomePath.empty())
     {
@@ -147,7 +147,7 @@ void GPark::Show()
         
         std::string treeStr;
         
-        GFileMgr::Tree(_savedRoot, &treeStr);
+        GFileMgr::Tree(_savedRoot, &treeStr, bVerbose);
         
         std::cout << treeStr << std::endl;
     }
@@ -163,36 +163,36 @@ void GPark::Save()
     {
         LoadDB();
         
-        std::vector<GFile *> changesList, missList, addList;
+        std::vector<GFile *> changesList, missList, addList, detailAddList;
         
-        GFile * nowFileRoot = GFileMgr::LoadFromPath(_WorkPath);
-        GFile * savedFileRoot = GFileMgr::GetFile(_savedRoot, nowFileRoot->FullPath());
+        GFile * nowFileRoot = GFileMgr::LoadFromPath(_WorkPath.c_str());
+        GFile * savedFileRoot = GFileMgr::GetFile(_savedRoot, nowFileRoot->FullPathUUID());
         
-        GFileMgr::DifferentFileList(savedFileRoot, nowFileRoot, changesList, missList, addList);
+        GFileMgr::DifferentFileList(savedFileRoot, nowFileRoot, changesList, missList, addList, detailAddList);
         
         GFile * cur = nullptr;
         for (int i = 0; i < missList.size(); ++i)
         {
-            cur = GFileMgr::GetFile(savedFileRoot, missList[i]->FullPath());
-            GAssert(cur != nullptr, "save error. can't find %s", missList[i]->FullPath().c_str());
+            cur = GFileMgr::GetFile(savedFileRoot, missList[i]->FullPathUUID());
+            GAssert(cur != nullptr, "save error. can't find %s", missList[i]->FullPath());
             
             cur->Parent()->RemoveChild(cur);
         }
         
         for (int i = 0; i < changesList.size(); ++i)
         {
-            cur = GFileMgr::GetFile(savedFileRoot, changesList[i]->FullPath());
-            GAssert(cur != nullptr, "save error. can't find %s", changesList[i]->FullPath().c_str());
+            cur = GFileMgr::GetFile(savedFileRoot, changesList[i]->FullPathUUID());
+            GAssert(cur != nullptr, "save error. can't find %s", changesList[i]->FullPath());
             
             cur->CopyFrom(changesList[i]);
         }
         
-        for (int i = 0; i < addList.size(); ++i)
+        for (int i = 0; i < detailAddList.size(); ++i)
         {
-            cur = GFileMgr::GetFile(savedFileRoot, addList[i]->Parent()->FullPath());
-            GAssert(cur != nullptr, "save error. can't find %s", addList[i]->Parent()->FullPath().c_str());
+            cur = GFileMgr::GetFile(savedFileRoot, detailAddList[i]->Parent()->FullPathUUID());
+            GAssert(cur != nullptr, "save error. can't find %s", detailAddList[i]->Parent()->FullPath());
             
-            cur->AppendChild(addList[i]);
+            cur->AppendChild(detailAddList[i]);
             cur->SortChildren();
         }
         
@@ -268,5 +268,5 @@ GPark::GPark()
 
 GPark::~GPark()
 {
-    
+
 }

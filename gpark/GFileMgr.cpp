@@ -10,6 +10,9 @@
 
 #include "GFileMgr.h"
 
+std::map<std::string, unsigned long> GFileMgr::_FullPathUUIDMap;
+unsigned long GFileMgr::_UUID_Automatic = 0;
+
 GFileMgr::GFileMgr()
 {
     
@@ -20,7 +23,7 @@ GFileMgr::~GFileMgr()
     
 }
 
-GFile * GFileMgr::LoadFromPath(const std::string &path_)
+GFile * GFileMgr::LoadFromPath(const char * path_)
 {
     GFile * ret = new GFile(nullptr, path_, nullptr);
     int fileCount = 0;
@@ -50,15 +53,19 @@ GFile * GFileMgr::Load(char * data_, size_t size_)
         cur = new GFile(data_ + offset, size, parent_id);
         if (root == nullptr)
         {
-            root = new GFile(nullptr, GPark::Instance()->GetHomePath(), nullptr, parent_id);
+            root = new GFile(nullptr, GPark::Instance()->GetHomePath().c_str(), nullptr, parent_id);
             gfileMap.insert(std::pair<long, GFile*>(parent_id, root));
         }
         
         parent = gfileMap[parent_id];
         
-        GAssert(parent, "can't find parent id when load DB.");
+        if (parent == nullptr)
+        {
+            GAssert(parent, "can't find parent id when load DB.");
+        }
 
         parent->AppendChild(cur);
+        cur->GenFullPath();
         
         gfileMap.insert(std::pair<long, GFile*>(cur->Id(), cur));
         
@@ -71,88 +78,138 @@ GFile * GFileMgr::Load(char * data_, size_t size_)
 void GFileMgr::DifferentFileList(GFile * savedFileRoot_, GFile * nowFileRoot_,
                                  std::vector<GFile*> & changesList,
                                  std::vector<GFile*> & missList,
-                                 std::vector<GFile*> & addList)
+                                 std::vector<GFile*> & addList,
+                                 std::vector<GFile*> & detailAddList)
 {
-     std::vector<GFile *> savedFileList, nowFileList, folderList;
-     GetFileList(savedFileRoot_, savedFileList);
-     GetFileList(nowFileRoot_, nowFileList);
-     
-     GFile * cur = nullptr;
-     bool bInFolder = false;
-     for (int i = 0; i < savedFileList.size(); ++i)
-     {
-         cur = GFileMgr::GetFile(nowFileRoot_, savedFileList[i]->FullPath());
-         if (cur)
-         {
-             if (!cur->IsFolder() && cur->IsDifferent(savedFileList[i]))
-             {
-                 changesList.push_back(cur);
-             }
-         }
-         else
-         {
-             bInFolder = false;
-
-             for (int j = 0; j < folderList.size(); ++j)
-             {
-                 if (folderList[j]->IsChild(savedFileList[i]))
-                 {
-                     bInFolder = true;
-                     break;
-                 }
-             }
-             if (!bInFolder)
-             {
-                 if (savedFileList[i]->IsFolder())
-                 {
-                     folderList.push_back(savedFileList[i]);
-                 }
-                 missList.push_back(savedFileList[i]);
-             }
-         }
-     }
-     folderList.clear();
-     for (int i = 0; i < nowFileList.size(); ++i)
-     {
-         cur = GFileMgr::GetFile(savedFileRoot_, nowFileList[i]->FullPath());
-         if (!cur)
-         {
-             bInFolder = false;
-             for (int j = 0; j < folderList.size(); ++j)
-             {
-                 if (folderList[j]->IsChild(nowFileList[i]))
-                 {
-                     bInFolder = true;
-                     break;
-                 }
-             }
-             if (!bInFolder)
-             {
-                 if (nowFileList[i]->IsFolder())
-                 {
-                     folderList.push_back(nowFileList[i]);
-                 }
-                 addList.push_back(nowFileList[i]);
-             }
-         }
-     }
+    std::vector<GFile *> savedFileList, nowFileList, folderList;
+    GetFileList(savedFileRoot_, savedFileList);
+    GetFileList(nowFileRoot_, nowFileList);
+    
+    std::map<unsigned long, GFile *> savedFileMap;
+    std::map<unsigned long, GFile *> nowFileMap;
+    
+    for (int i = 0; i < savedFileList.size(); ++i)
+    {
+        savedFileMap.insert(std::pair<unsigned long, GFile *>(savedFileList[i]->FullPathUUID(), savedFileList[i]));
+    }
+    
+    for (int i = 0; i < nowFileList.size(); ++i)
+    {
+        nowFileMap.insert(std::pair<unsigned long, GFile *>(nowFileList[i]->FullPathUUID(), nowFileList[i]));
+    }
+    std::map<unsigned long, GFile *>::iterator it;
+    
+    GFile * cur = nullptr;
+    bool bInFolder = false;
+    for (int i = 0; i < savedFileList.size(); ++i)
+    {
+        it = nowFileMap.find(savedFileList[i]->FullPathUUID());
+        if (it == nowFileMap.end())
+        {
+            cur = nullptr;
+        }
+        else
+        {
+            cur = it->second;
+        }
+//        for (int ii = 0; ii < nowFileList.size(); ++ii)
+//        {
+//            if (nowFileList[ii]->IsSamePath(savedFileList[i]))
+//            {
+//                cur = nowFileList[ii];
+//                break;
+//            }
+//        }
+        //         cur = GFileMgr::GetFile(nowFileRoot_, savedFileList[i]->FullPathUUID());
+        if (cur)
+        {
+            if (!cur->IsFolder() && cur->IsDifferent(savedFileList[i]))
+            {
+                changesList.push_back(cur);
+            }
+        }
+        else
+        {
+            bInFolder = false;
+            
+            for (int j = 0; j < folderList.size(); ++j)
+            {
+                if (folderList[j]->IsChild(savedFileList[i]))
+                {
+                    bInFolder = true;
+                    break;
+                }
+            }
+            if (!bInFolder)
+            {
+                if (savedFileList[i]->IsFolder())
+                {
+                    folderList.push_back(savedFileList[i]);
+                }
+                missList.push_back(savedFileList[i]);
+            }
+        }
+    }
+    folderList.clear();
+    for (int i = 0; i < nowFileList.size(); ++i)
+    {
+        it = savedFileMap.find(nowFileList[i]->FullPathUUID());
+        if (it == savedFileMap.end())
+        {
+            cur = nullptr;
+        }
+        else
+        {
+            cur = it->second;
+        }
+//        for (int ii = 0; ii < savedFileList.size(); ++ii)
+//        {
+//            if (savedFileList[ii]->IsSamePath(nowFileList[i]))
+//            {
+//                cur = savedFileList[ii];
+//                break;
+//            }
+//        }
+        //         cur = GFileMgr::GetFile(savedFileRoot_, nowFileList[i]->FullPathUUID());
+        if (!cur && nowFileList[i]->Parent() != nullptr)
+        {
+            bInFolder = false;
+            for (int j = 0; j < folderList.size(); ++j)
+            {
+                if (folderList[j]->IsChild(nowFileList[i]))
+                {
+                    bInFolder = true;
+                    break;
+                }
+            }
+            if (!bInFolder)
+            {
+                if (nowFileList[i]->IsFolder())
+                {
+                    folderList.push_back(nowFileList[i]);
+                }
+                addList.push_back(nowFileList[i]);
+            }
+            detailAddList.push_back(nowFileList[i]);
+        }
+    }
 }
 
-void GFileMgr::Tree(GFile * root, std::string * str, std::string tab)
+void GFileMgr::Tree(GFile * root, std::string * str, bool bVerbose, std::string tab)
 {
     if (root->Parent())
     {
-        *str += tab + root->ToString() + "\n";
+        *str += tab + root->ToString(bVerbose) + "\n";
         for (int i = 0; i < root->ChildrenSize(); ++i)
         {
-            Tree(root->Children(i), str, tab + "|   ");
+            Tree(root->Children(i), str, bVerbose, tab + "|   ");
         }
     }
     else
     {
         for (int i = 0; i < root->ChildrenSize(); ++i)
         {
-            Tree(root->Children(i), str, "");
+            Tree(root->Children(i), str, bVerbose, "");
         }
     }
 }
@@ -184,11 +241,11 @@ void GFileMgr::ToBin(GFile * root, char * data_, size_t & offset_)
     }
 }
 
-GFile * GFileMgr::GetFile(GFile * root, const std::string & fullPath_)
+GFile * GFileMgr::GetFile(GFile * root, const unsigned long fullPathUUID_)
 {
     GFile * ret = nullptr;
     
-    if (root->FullPath() == fullPath_)
+    if (root->FullPathUUID() == fullPathUUID_)
     {
         ret = root;
     }
@@ -196,7 +253,7 @@ GFile * GFileMgr::GetFile(GFile * root, const std::string & fullPath_)
     {
         for (int i = 0; i < root->ChildrenSize(); ++i)
         {
-            ret = GetFile(root->Children(i), fullPath_);
+            ret = GetFile(root->Children(i), fullPathUUID_);
             if (ret)
             {
                 break;
@@ -217,6 +274,18 @@ void GFileMgr::GetFileList(GFile * root_, std::vector<GFile *> & fileList_)
     }
 }
 
+unsigned long GFileMgr::GetUUID(std::string fullPath_)
+{
+    std::map<std::string, unsigned long>::iterator it = _FullPathUUIDMap.find(fullPath_);
+    if (it == _FullPathUUIDMap.end())
+    {
+        _FullPathUUIDMap.insert(std::pair<std::string, unsigned long>(fullPath_, _UUID_Automatic++));
+        it = _FullPathUUIDMap.find(fullPath_);
+    }
+    
+    return it->second;
+}
+
 void GFileMgr::LoadFolderImpl(std::string path, GFile * parent, int & fileCount)
 {
     DIR * dir = opendir(path.c_str());
@@ -234,13 +303,13 @@ void GFileMgr::LoadFolderImpl(std::string path, GFile * parent, int & fileCount)
                 strcmp(ptr->d_name, REPOS_PATH_FOLDER) != 0)
             {
                 fileCount++;
-                std::string aaa = path + "/" + ptr->d_name;
-                currentFile = new GFile(parent, aaa, ptr);
+                std::string fileFullPatn = path + "/" + ptr->d_name;
+                currentFile = new GFile(parent, fileFullPatn.c_str(), ptr);
                 parent->AppendChild(currentFile);
                 
                 if (currentFile->IsFolder())
                 {
-                    LoadFolderImpl(aaa, currentFile, fileCount);
+                    LoadFolderImpl(fileFullPatn.c_str(), currentFile, fileCount);
                 }
             }
         }

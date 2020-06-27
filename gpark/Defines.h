@@ -32,6 +32,8 @@
 #define REPOS_PATH_INDEX                REPOS_PATH_FOLDER "/index"
 #define REPOS_PATH_DB                   REPOS_PATH_FOLDER "/db"
 
+#define FORMAT_FILESIZE_BUFFER_LENGTH   50
+
 #define STORAGE_KB          1024
 #define STORAGE_MB          1048576
 #define STORAGE_GB          1073741824

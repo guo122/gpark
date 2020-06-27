@@ -19,7 +19,14 @@ int main(int argc, const char * argv[])
         }
         else if (strcmp(argv[1], "show") == 0)
         {
-            GPark::Instance()->Show();
+            if (argc > 2 && strcmp(argv[2], "-v") == 0)
+            {
+                GPark::Instance()->Show(true);
+            }
+            else
+            {
+                GPark::Instance()->Show(false);
+            }
         }
         else if (strcmp(argv[1], "save") == 0)
         {
@@ -30,10 +37,12 @@ int main(int argc, const char * argv[])
             std::cout << "gpark usage:" << std::endl;
             std::cout << "\tgpark init" << std::endl;
             std::cout << "\tgpark tree" << std::endl;
-            std::cout << "\tgpark show" << std::endl;
+            std::cout << "\tgpark show [-v]" << std::endl;
             std::cout << "\tgpark save" << std::endl;
         }
     }
+    
+    std::cout << std::endl;
     
     GPark::Instance()->Destory();
     

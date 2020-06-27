@@ -15,7 +15,7 @@ public:
     void InitDB();
     void Stats();
     void Tree();
-    void Show();
+    void Show(bool bVerbose);
     void Save();
     
     void Destory();

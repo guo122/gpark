@@ -13,7 +13,7 @@ class GFile
 {
 public:
     GFile(char * data_, size_t size_, long & parent_id_);
-    GFile(GFile * parent_, const std::string & fullPath_ = "", struct dirent * dirent_ = nullptr, long id_ = -1);
+    GFile(GFile * parent_, const char * fullPath_ = "", struct dirent * dirent_ = nullptr, long id_ = -1);
     ~GFile();
     
 public:
@@ -21,7 +21,8 @@ public:
     GFile * Parent();
     struct stat & Stat();
     const char * CurrentPath();
-    const std::string & FullPath();
+    const char * FullPath();
+    const unsigned long & FullPathUUID();
     const std::string & Name();
     unsigned char * Sha();
     size_t ChildrenSize();
@@ -30,13 +31,15 @@ public:
 public:
     void SetParent(GFile * parent_);
     void CopyFrom(GFile * file_);
+    void GenFullPath();
     void AppendChild(GFile * child_);
     void RemoveChild(GFile * child_, bool bRemoveAllChildren = false);
+    bool IsSamePath(GFile * file_);
     bool IsDifferent(GFile * file_);
     bool IsChild(GFile * file_);
     bool IsFolder();
     void SortChildren();
-    std::string ToString();
+    std::string ToString(bool bVerbose);
     size_t ToBin(char * data_, size_t offset_);
     
     size_t SaveSize();
@@ -49,9 +52,10 @@ private:
     
     struct stat     _stat;
     
-    std::string     _fullPath;
+    char     _fullPath[1024];
     std::string     _name;
     bool            _bGenShaed;
+    unsigned long   _FullPathUUID;
     unsigned char   _sha[SHA_CHAR_LENGTH];
     
 private:
