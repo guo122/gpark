@@ -25,11 +25,17 @@
 #define CONSOLE_COLOR_BG_CYAN           "\033[46m"
 #define CONSOLE_COLOR_BG_WHITE          "\033[47m"
 
+#define CONSOLE_COLOR_FOLDER            "\033[34m"
 #define CONSOLE_COLOR_WHITE_BLACK       "\033[30;47m"
 
-#define REPOS_PATH_FOLDER               "/_gpark"
-#define REPOS_PATH_INDEX                "/_gpark/index"
-#define REPOS_PATH_DB                   "/_gpark/db"
+#define REPOS_PATH_FOLDER               "_gpark"
+#define REPOS_PATH_INDEX                REPOS_PATH_FOLDER "/index"
+#define REPOS_PATH_DB                   REPOS_PATH_FOLDER "/db"
+
+#define STORAGE_KB          1024
+#define STORAGE_MB          1048576
+#define STORAGE_GB          1073741824
+#define STORAGE_TB          1099511627776
 
 #define DB_OFFSET_LENGTH    8
 

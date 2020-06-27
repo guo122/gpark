@@ -15,19 +15,23 @@ public:
     void InitDB();
     void Stats();
     void Tree();
+    void Show();
+    void Save();
+    
+    void Destory();
     
 public:
     std::string GetWorkPath();
-    std::string GetGparkPath();
+    std::string GetHomePath();
     
 private:
     bool DetectGParkPath();
-    void SaveDB(GFile * root);
     void LoadDB();
+    void SaveDB(GFile * root_);
     
 private:
     std::string _WorkPath;
-    std::string _GParkPath;
+    std::string _HomePath;
     
     GFile * _savedRoot;
     
