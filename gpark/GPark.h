@@ -13,10 +13,11 @@ public:
     
 public:
     void InitDB();
-    void Stats();
+    void Status();
     void Tree();
     void Show(bool bVerbose);
     void Save();
+    void Diff(const char * otherRepos_);
     
     void Destory();
     
@@ -25,8 +26,9 @@ public:
     std::string GetHomePath();
     
 private:
+    void DiffRepos(GFile * thisRepos, GFile * otherRepos);
     bool DetectGParkPath();
-    void LoadDB();
+    GFile * LoadDB(const char * DBPath_);
     void SaveDB(GFile * root_);
     
 private:

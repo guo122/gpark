@@ -59,6 +59,42 @@ std::string GPark::GetHomePath()
     return _HomePath;
 }
 
+void GPark::DiffRepos(GFile * thisRepos, GFile * otherRepos)
+{
+    std::vector<GFile *> changesList, missList, addList, detailAddList;
+    
+    GFileMgr::DifferentFileList(thisRepos, otherRepos, changesList, missList, addList, detailAddList);
+    
+    for (int i = 0; i < changesList.size(); ++i)
+    {
+        std::cout << CONSOLE_COLOR_FONT_YELLOW "[change]" CONSOLE_COLOR_END << changesList[i]->CurrentPath() << std::endl;
+    }
+    
+    for (int i = 0; i < missList.size(); ++i)
+    {
+        if (missList[i]->IsFolder())
+        {
+            std::cout << CONSOLE_COLOR_FONT_RED "[miss]" CONSOLE_COLOR_END CONSOLE_COLOR_FOLDER << missList[i]->CurrentPath() << "/" CONSOLE_COLOR_END << std::endl;
+        }
+        else
+        {
+            std::cout << CONSOLE_COLOR_FONT_RED "[miss]" CONSOLE_COLOR_END << missList[i]->CurrentPath() << std::endl;
+        }
+    }
+    
+    for (int i = 0; i < addList.size(); ++i)
+    {
+        if (addList[i]->IsFolder())
+        {
+            std::cout << CONSOLE_COLOR_FONT_GREEN "[add]" CONSOLE_COLOR_END CONSOLE_COLOR_FOLDER << addList[i]->CurrentPath() << "/" CONSOLE_COLOR_END << std::endl;
+        }
+        else
+        {
+            std::cout << CONSOLE_COLOR_FONT_GREEN "[add]" CONSOLE_COLOR_END << addList[i]->CurrentPath() << std::endl;
+        }
+    }
+}
+
 bool GPark::DetectGParkPath()
 {
     bool ret = true;
@@ -81,48 +117,15 @@ bool GPark::DetectGParkPath()
     return ret;
 }
 
-void GPark::Stats()
+void GPark::Status()
 {
-    if (!_HomePath.empty())
+    _savedRoot = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
+    if (_savedRoot)
     {
-        LoadDB();
-        
         GFile * nowFileRoot = GFileMgr::LoadFromPath(_WorkPath.c_str());
         GFile * savedFileRoot = GFileMgr::GetFile(_savedRoot, nowFileRoot->FullPathUUID());
         
-        std::vector<GFile *> changesList, missList, addList, detailAddList;
-        
-        GFileMgr::DifferentFileList(savedFileRoot, nowFileRoot, changesList, missList, addList, detailAddList);
-        
-        for (int i = 0; i < changesList.size(); ++i)
-        {
-            std::cout << CONSOLE_COLOR_FONT_YELLOW "[change]" CONSOLE_COLOR_END << changesList[i]->CurrentPath() << std::endl;
-        }
-        
-        for (int i = 0; i < missList.size(); ++i)
-        {
-            if (missList[i]->IsFolder())
-            {
-                std::cout << CONSOLE_COLOR_FONT_RED "[miss]" CONSOLE_COLOR_END CONSOLE_COLOR_FOLDER << missList[i]->CurrentPath() << "/" CONSOLE_COLOR_END << std::endl;
-            }
-            else
-            {
-                std::cout << CONSOLE_COLOR_FONT_RED "[miss]" CONSOLE_COLOR_END << missList[i]->CurrentPath() << std::endl;
-            }
-        }
-        
-        for (int i = 0; i < addList.size(); ++i)
-        {
-            if (addList[i]->IsFolder())
-            {
-                std::cout << CONSOLE_COLOR_FONT_GREEN "[add]" CONSOLE_COLOR_END CONSOLE_COLOR_FOLDER << addList[i]->CurrentPath() << "/" CONSOLE_COLOR_END << std::endl;
-            }
-            else
-            {
-                std::cout << CONSOLE_COLOR_FONT_GREEN "[add]" CONSOLE_COLOR_END << addList[i]->CurrentPath() << std::endl;
-            }
-        }
-        
+        DiffRepos(savedFileRoot, nowFileRoot);
     }
     else
     {
@@ -141,10 +144,9 @@ void GPark::Tree()
 
 void GPark::Show(bool bVerbose)
 {
-    if (!_HomePath.empty())
+    _savedRoot = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
+    if (_savedRoot)
     {
-        LoadDB();
-        
         std::string treeStr;
         
         GFileMgr::Tree(_savedRoot, &treeStr, bVerbose);
@@ -159,10 +161,9 @@ void GPark::Show(bool bVerbose)
 
 void GPark::Save()
 {
-    if (!_HomePath.empty())
+    _savedRoot = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
+    if (_savedRoot)
     {
-        LoadDB();
-        
         std::vector<GFile *> changesList, missList, addList, detailAddList;
         
         GFile * nowFileRoot = GFileMgr::LoadFromPath(_WorkPath.c_str());
@@ -202,8 +203,31 @@ void GPark::Save()
     {
         std::cout << "fatal: not a gpark repository." << std::endl;
     }
-    
+}
 
+void GPark::Diff(const char * otherRepos_)
+{
+    _savedRoot = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
+    if (_savedRoot)
+     {
+         std::string otherReposStr = otherRepos_;
+         otherReposStr += "/" REPOS_PATH_DB;
+         
+         GFile * otherRoot = LoadDB(otherReposStr.c_str());
+         
+         if (otherRoot == nullptr)
+         {
+             std::cout << "fatal: not found other repository." << std::endl;
+         }
+         else
+         {
+             DiffRepos(_savedRoot, otherRoot);
+         }
+     }
+     else
+     {
+         std::cout << "fatal: not a gpark repository." << std::endl;
+     }
 }
 
 void GPark::Destory()
@@ -211,25 +235,32 @@ void GPark::Destory()
     // todo(gzy): delete GFile *
 }
 
-void GPark::LoadDB()
+GFile * GPark::LoadDB(const char * DBPath_)
 {
+    GFile * ret = nullptr;
+    
     std::ifstream ifile;
     
-    ifile.open((_HomePath + "/" REPOS_PATH_DB).c_str(), std::ios::in | std::ios::binary);
+    ifile.open(DBPath_, std::ios::in | std::ios::binary);
     
-    char * readBuffer = new char[DB_OFFSET_LENGTH];
+    if (ifile.is_open())
+    {
+        char * readBuffer = new char[DB_OFFSET_LENGTH];
+        
+        ifile.read(readBuffer, DB_OFFSET_LENGTH);
+        
+        size_t size = *((size_t*)readBuffer);
+        delete[] readBuffer;
+        
+        readBuffer = new char[size - DB_OFFSET_LENGTH];
+        ifile.read(readBuffer, size - DB_OFFSET_LENGTH);
+        ret = GFileMgr::Load(readBuffer, size - DB_OFFSET_LENGTH);
+        
+        ifile.close();
+        delete [] readBuffer;
+    }
     
-    ifile.read(readBuffer, DB_OFFSET_LENGTH);
-    
-    size_t size = *((size_t*)readBuffer);
-    delete[] readBuffer;
-    
-    readBuffer = new char[size - DB_OFFSET_LENGTH];
-    ifile.read(readBuffer, size - DB_OFFSET_LENGTH);
-    _savedRoot = GFileMgr::Load(readBuffer, size - DB_OFFSET_LENGTH);
-    
-    ifile.close();
-    delete [] readBuffer;
+    return ret;
 }
 
 void GPark::SaveDB(GFile * root_)

@@ -5,7 +5,7 @@ int main(int argc, const char * argv[])
 {
     if (argc == 1)
     {
-        GPark::Instance()->Stats();
+        GPark::Instance()->Status();
     }
     else if (argc > 1)
     {
@@ -32,6 +32,10 @@ int main(int argc, const char * argv[])
         {
             GPark::Instance()->Save();
         }
+        else if (argc > 2 && strcmp(argv[1], "diff") == 0)
+        {
+            GPark::Instance()->Diff(argv[2]);
+        }
         else
         {
             std::cout << "gpark usage:" << std::endl;
@@ -39,6 +43,7 @@ int main(int argc, const char * argv[])
             std::cout << "\tgpark tree" << std::endl;
             std::cout << "\tgpark show [-v]" << std::endl;
             std::cout << "\tgpark save" << std::endl;
+            std::cout << "\tgpark diff <other repos>" << std::endl;
         }
     }
     
