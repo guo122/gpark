@@ -159,10 +159,10 @@ void GFile::SetParent(GFile * parent_)
 
 void GFile::CopyFrom(GFile * file_)
 {
-    _parent = file_->Parent();
-    strcpy(_fullPath, file_->FullPath());
-    _FullPathUUID = file_->FullPathUUID();
-    _name = file_->Name();
+//    _parent = file_->Parent();
+//    strcpy(_fullPath, file_->FullPath());
+//    _FullPathUUID = file_->FullPathUUID();
+//    _name = file_->Name();
     _bGenShaed = file_->_bGenShaed;
     memcpy(_sha, file_->Sha(), SHA_CHAR_LENGTH);
     _stat = file_->Stat();

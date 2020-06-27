@@ -193,8 +193,8 @@ void GPark::Save()
             GAssert(cur != nullptr, "save error. can't find %s", detailAddList[i]->Parent()->FullPath());
             
             cur->AppendChild(detailAddList[i]);
-            cur->SortChildren();
         }
+        cur->SortChildren();
         
         SaveDB(_savedRoot);
     }
