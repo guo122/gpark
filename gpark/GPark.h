@@ -5,6 +5,7 @@
 #include "Defines.h"
 
 class GFile;
+class GFileTree;
 
 class GPark
 {
@@ -26,16 +27,16 @@ public:
     std::string GetHomePath();
     
 private:
-    void DiffRepos(GFile * thisRepos, GFile * otherRepos);
+    void DiffRepos(GFileTree * thisRepos, GFileTree * otherRepos);
     bool DetectGParkPath();
-    GFile * LoadDB(const char * DBPath_);
-    void SaveDB(GFile * root_);
+    GFileTree * LoadDB(const char * DBPath_);
+    void SaveDB();
     
 private:
     std::string _WorkPath;
     std::string _HomePath;
     
-    GFile * _savedRoot;
+    GFileTree * _savedFileTree;
     
 private:
     GPark();

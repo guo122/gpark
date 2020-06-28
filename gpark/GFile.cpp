@@ -6,6 +6,7 @@
 #include "GTools.h"
 #include "GPark.h"
 #include "GFileMgr.h"
+#include "GFileTree.h"
 
 #include "GFile.h"
 
@@ -198,11 +199,20 @@ bool GFile::IsSamePath(GFile * file_)
 bool GFile::IsDifferent(GFile * file_)
 {
     bool ret = false;
-    if (file_->Stat().st_size != _stat.st_size ||
-        (file_->Stat().st_mtimespec.tv_nsec != _stat.st_mtimespec.tv_nsec &&
-         memcmp(file_->Sha(), Sha(), SHA_CHAR_LENGTH) != 0))
+    if (file_->Stat().st_size != _stat.st_size)
     {
-        return true;
+        ret = true;
+    }
+    else if (file_->Stat().st_mtimespec.tv_nsec != _stat.st_mtimespec.tv_nsec)
+    {
+        if (memcmp(file_->Sha(), Sha(), SHA_CHAR_LENGTH) != 0)
+        {
+            ret = true;
+        }
+        else
+        {
+            _stat = file_->Stat();
+        }
     }
     return ret;
 }
@@ -308,4 +318,10 @@ size_t GFile::SaveSize()
     size_t ret = sizeof(long) + sizeof(long) + sizeof(struct stat) + _name.size() + 1 + SHA_CHAR_LENGTH;
     
     return ret;
+}
+
+
+void GFile::ReGenerateID()
+{
+    _id = ++_id_automatic_inc;
 }

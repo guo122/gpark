@@ -9,6 +9,7 @@
 
 #include "GFileMgr.h"
 #include "GFile.h"
+#include "GFileTree.h"
 
 GPark * GPark::_instance = nullptr;
 
@@ -41,9 +42,9 @@ void GPark::InitDB()
         
         _HomePath = _WorkPath;
         
-        _savedRoot = GFileMgr::LoadFromPath(_HomePath.c_str());
+        _savedFileTree = GFileMgr::LoadFromPath(_HomePath.c_str());
 
-        SaveDB(_savedRoot);
+        SaveDB();
         
         std::cout << "init db done. " << std::endl;
     }
@@ -59,7 +60,7 @@ std::string GPark::GetHomePath()
     return _HomePath;
 }
 
-void GPark::DiffRepos(GFile * thisRepos, GFile * otherRepos)
+void GPark::DiffRepos(GFileTree * thisRepos, GFileTree * otherRepos)
 {
     std::vector<GFile *> changesList, missList, addList, detailAddList;
     
@@ -119,13 +120,13 @@ bool GPark::DetectGParkPath()
 
 void GPark::Status()
 {
-    _savedRoot = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
-    if (_savedRoot)
+    _savedFileTree = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
+    if (_savedFileTree)
     {
-        GFile * nowFileRoot = GFileMgr::LoadFromPath(_WorkPath.c_str());
-        GFile * savedFileRoot = GFileMgr::GetFile(_savedRoot, nowFileRoot->FullPathUUID());
+        GFileTree * nowFileTree = GFileMgr::LoadFromPath(_WorkPath.c_str());
+        GFileTree * thisFileTree = _savedFileTree->GetSubTree(nowFileTree->Root()->FullPathUUID());
         
-        DiffRepos(savedFileRoot, nowFileRoot);
+        DiffRepos(thisFileTree, nowFileTree);
     }
     else
     {
@@ -137,19 +138,19 @@ void GPark::Tree()
 {
     std::string treeStr;
     
-    GFileMgr::Tree(GFileMgr::LoadFromPath(_WorkPath.c_str()), &treeStr, false);
+    GFileMgr::Tree(GFileMgr::LoadFromPath(_WorkPath.c_str())->Root(), &treeStr, false);
     
     std::cout << treeStr << std::endl;
 }
 
 void GPark::Show(bool bVerbose)
 {
-    _savedRoot = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
-    if (_savedRoot)
+    _savedFileTree = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
+    if (_savedFileTree)
     {
         std::string treeStr;
         
-        GFileMgr::Tree(_savedRoot, &treeStr, bVerbose);
+        GFileMgr::Tree(_savedFileTree->Root(), &treeStr, bVerbose);
         
         std::cout << treeStr << std::endl;
     }
@@ -161,20 +162,20 @@ void GPark::Show(bool bVerbose)
 
 void GPark::Save()
 {
-    _savedRoot = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
-    if (_savedRoot)
+    _savedFileTree = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
+    if (_savedFileTree)
     {
         std::vector<GFile *> changesList, missList, addList, detailAddList;
         
-        GFile * nowFileRoot = GFileMgr::LoadFromPath(_WorkPath.c_str());
-        GFile * savedFileRoot = GFileMgr::GetFile(_savedRoot, nowFileRoot->FullPathUUID());
+        GFileTree * nowFileTree = GFileMgr::LoadFromPath(_WorkPath.c_str());
+        GFileTree * thisFileTree = _savedFileTree->GetSubTree(nowFileTree->Root()->FullPathUUID());
         
-        GFileMgr::DifferentFileList(savedFileRoot, nowFileRoot, changesList, missList, addList, detailAddList);
+        GFileMgr::DifferentFileList(thisFileTree, nowFileTree, changesList, missList, addList, detailAddList);
         
         GFile * cur = nullptr;
         for (int i = 0; i < missList.size(); ++i)
         {
-            cur = GFileMgr::GetFile(savedFileRoot, missList[i]->FullPathUUID());
+            cur = _savedFileTree->GetFile(missList[i]->FullPathUUID());
             GAssert(cur != nullptr, "save error. can't find %s", missList[i]->FullPath());
             
             cur->Parent()->RemoveChild(cur);
@@ -182,22 +183,24 @@ void GPark::Save()
         
         for (int i = 0; i < changesList.size(); ++i)
         {
-            cur = GFileMgr::GetFile(savedFileRoot, changesList[i]->FullPathUUID());
+            cur = _savedFileTree->GetFile(changesList[i]->FullPathUUID());
             GAssert(cur != nullptr, "save error. can't find %s", changesList[i]->FullPath());
             
             cur->CopyFrom(changesList[i]);
         }
         
-        for (int i = 0; i < detailAddList.size(); ++i)
+        for (int i = 0; i < addList.size(); ++i)
         {
-            cur = GFileMgr::GetFile(savedFileRoot, detailAddList[i]->Parent()->FullPathUUID());
-            GAssert(cur != nullptr, "save error. can't find %s", detailAddList[i]->Parent()->FullPath());
+            cur = _savedFileTree->GetFile(addList[i]->Parent()->FullPathUUID());
+            GAssert(cur != nullptr, "save error. can't find %s", addList[i]->Parent()->FullPath());
             
-            cur->AppendChild(detailAddList[i]);
+            cur->AppendChild(addList[i]);
+            _savedFileTree->Refresh(false);
         }
+        
         cur->SortChildren();
         
-        SaveDB(_savedRoot);
+        SaveDB();
     }
     else
     {
@@ -207,21 +210,21 @@ void GPark::Save()
 
 void GPark::Diff(const char * otherRepos_)
 {
-    _savedRoot = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
-    if (_savedRoot)
+    _savedFileTree = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
+    if (_savedFileTree)
      {
          std::string otherReposStr = otherRepos_;
          otherReposStr += "/" REPOS_PATH_DB;
          
-         GFile * otherRoot = LoadDB(otherReposStr.c_str());
+         GFileTree * otherFileTree = LoadDB(otherReposStr.c_str());
          
-         if (otherRoot == nullptr)
+         if (otherFileTree == nullptr)
          {
              std::cout << "fatal: not found other repository." << std::endl;
          }
          else
          {
-             DiffRepos(_savedRoot, otherRoot);
+             DiffRepos(_savedFileTree, otherFileTree);
          }
      }
      else
@@ -235,9 +238,9 @@ void GPark::Destory()
     // todo(gzy): delete GFile *
 }
 
-GFile * GPark::LoadDB(const char * DBPath_)
+GFileTree * GPark::LoadDB(const char * DBPath_)
 {
-    GFile * ret = nullptr;
+    GFileTree * ret = nullptr;
     
     std::ifstream ifile;
     
@@ -254,7 +257,7 @@ GFile * GPark::LoadDB(const char * DBPath_)
         
         readBuffer = new char[size - DB_OFFSET_LENGTH];
         ifile.read(readBuffer, size - DB_OFFSET_LENGTH);
-        ret = GFileMgr::Load(readBuffer, size - DB_OFFSET_LENGTH);
+        ret = GFileMgr::LoadFromDB(readBuffer, size - DB_OFFSET_LENGTH);
         
         ifile.close();
         delete [] readBuffer;
@@ -263,21 +266,19 @@ GFile * GPark::LoadDB(const char * DBPath_)
     return ret;
 }
 
-void GPark::SaveDB(GFile * root_)
+void GPark::SaveDB()
 {
     std::ofstream ofile;
     ofile.open((_HomePath + "/" REPOS_PATH_DB).c_str(), std::ios::out | std::ios::binary);
     
-    size_t size = 0, offset = DB_OFFSET_LENGTH;
-    GFileMgr::CheckSize(root_, size);
-    
-    size += DB_OFFSET_LENGTH;
-    
+    _savedFileTree->Refresh(true);
+    size_t size = _savedFileTree->CheckSize() + DB_OFFSET_LENGTH;
+
     char * writeBuffer = new char[size];
     
     memcpy(writeBuffer, (char *)&size, DB_OFFSET_LENGTH);
     
-    GFileMgr::ToBin(root_, writeBuffer, offset);
+    _savedFileTree->ToBin(writeBuffer + DB_OFFSET_LENGTH);
     
     ofile.write(writeBuffer, size);
     
@@ -288,7 +289,7 @@ void GPark::SaveDB(GFile * root_)
 GPark::GPark()
     : _WorkPath("")
     , _HomePath("")
-    , _savedRoot(nullptr)
+    , _savedFileTree(nullptr)
 {
     char tmpChar[1024];
     getcwd(tmpChar, 1024);

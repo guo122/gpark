@@ -3,6 +3,7 @@
 
 int main(int argc, const char * argv[])
 {
+//    GPark::Instance()->Save();
     if (argc == 1)
     {
         GPark::Instance()->Status();

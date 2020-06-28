@@ -9,8 +9,11 @@
 
 struct dirent;
 
+class GFileTree;
+
 class GFile
 {
+    friend GFileTree;
 public:
     GFile(char * data_, size_t size_, long & parent_id_);
     GFile(GFile * parent_, const char * fullPath_ = "", struct dirent * dirent_ = nullptr, long id_ = -1);
@@ -43,6 +46,9 @@ public:
     size_t ToBin(char * data_, size_t offset_);
     
     size_t SaveSize();
+    
+private:
+    void ReGenerateID();
     
 private:
     long    _id;
