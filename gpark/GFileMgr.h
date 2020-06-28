@@ -3,6 +3,7 @@
 #define _GFILEMGR_H_
 
 #include <map>
+#include <set>
 
 #include "Defines.h"
 
@@ -14,6 +15,7 @@ class GFileMgr
 public:
     static GFileTree * LoadFromPath(const char * path_);
     static GFileTree * LoadFromDB(char * data_, size_t size_);
+    static void LoadIgnoreFile(std::string homePath_);
     static void DifferentFileList(GFileTree * thisFileTree, GFileTree * otherFileTree,
                                   std::vector<GFile*> & changesList,
                                   std::vector<GFile*> & missList,
@@ -30,6 +32,9 @@ private:
 private:
     static std::map<std::string, unsigned long> _FullPathUUIDMap;
     static unsigned long _UUID_Automatic;
+    
+    static std::set<std::string>     _ignoreNameSet;
+    static std::set<unsigned long>      _ignoreUUIDSet;
     
 private:
     GFileMgr();

@@ -1,5 +1,6 @@
 
-#include <map>
+#include <string>
+#include <fstream>
 
 #include <errno.h>
 #include <dirent.h>
@@ -14,6 +15,9 @@
 std::map<std::string, unsigned long> GFileMgr::_FullPathUUIDMap;
 unsigned long GFileMgr::_UUID_Automatic = 0;
 
+std::set<std::string> GFileMgr::_ignoreNameSet;
+std::set<unsigned long> GFileMgr::_ignoreUUIDSet;
+
 GFileMgr::GFileMgr()
 {
     
@@ -26,7 +30,7 @@ GFileMgr::~GFileMgr()
 
 GFileTree * GFileMgr::LoadFromPath(const char * path_)
 {
-    GFile * root = new GFile(nullptr, path_, nullptr);
+    GFile * root = new GFile(nullptr, path_, GetUUID(path_), nullptr);
     int fileCount = 0;
     
     std::cout << "load...";
@@ -55,7 +59,7 @@ GFileTree * GFileMgr::LoadFromDB(char * data_, size_t size_)
         cur = new GFile(data_ + offset, size, parent_id);
         if (root == nullptr)
         {
-            root = new GFile(nullptr, GPark::Instance()->GetHomePath().c_str(), nullptr, parent_id);
+            root = new GFile(nullptr, GPark::Instance()->GetHomePath().c_str(), GetUUID(GPark::Instance()->GetHomePath()), nullptr, parent_id);
             gfileMap.insert(std::pair<long, GFile*>(parent_id, root));
         }
         
@@ -75,6 +79,40 @@ GFileTree * GFileMgr::LoadFromDB(char * data_, size_t size_)
     }
     
     return new GFileTree(root);
+}
+
+void GFileMgr::LoadIgnoreFile(std::string homePath_)
+{
+    std::ifstream ifile;
+    
+    ifile.open((homePath_ + "/" GPARK_PATH_IGNORE).c_str(), std::ios::in);
+    
+    if (ifile.is_open())
+    {
+        std::string tempStr = "";
+        std::string::size_type slashPos;
+        while (getline(ifile, tempStr))
+        {
+            if (!tempStr.empty())
+            {
+                slashPos = tempStr.find("/");
+                if (slashPos == std::string::npos)
+                {
+                    _ignoreNameSet.insert(tempStr);
+                }
+                else if (tempStr[0] != '/')
+                {
+                    if (tempStr[tempStr.size() - 1] == '/')
+                    {
+                        tempStr.erase(tempStr.end() - 1);
+                    }
+                    tempStr = homePath_ + "/" + tempStr;
+                    _ignoreUUIDSet.insert(GetUUID(tempStr));
+                }
+            }
+        }
+        ifile.close();
+    }
 }
 
 void GFileMgr::DifferentFileList(GFileTree * thisFileTree, GFileTree * otherFileTree,
@@ -191,19 +229,35 @@ void GFileMgr::LoadFolderImpl(std::string path, GFile * parent, int & fileCount)
     
     if (dir)
     {
+        std::set<std::string>::iterator it_name = _ignoreNameSet.end();
+        std::set<unsigned long>::iterator it_UUID = _ignoreUUIDSet.end();
         struct dirent * ptr;
         GFile * currentFile = nullptr;
         while ((ptr = readdir(dir)) != nullptr)
         {
+            it_name = _ignoreNameSet.find(ptr->d_name);
+            if (it_name != _ignoreNameSet.end())
+            {
+                continue;
+            }
+            
             if (strcmp(ptr->d_name, ".") != 0 &&
                 strcmp(ptr->d_name, "..") != 0 &&
-                strcmp(ptr->d_name, ".DS_Store") != 0 &&
-                strcmp(ptr->d_name, ".git") != 0 &&
-                strcmp(ptr->d_name, REPOS_PATH_FOLDER) != 0)
+                strcmp(ptr->d_name, GPARK_PATH_HOME) != 0)
             {
-                fileCount++;
                 std::string fileFullPatn = path + "/" + ptr->d_name;
-                currentFile = new GFile(parent, fileFullPatn.c_str(), ptr);
+                unsigned long fullPathUUID = GetUUID(fileFullPatn);
+                
+                it_UUID = _ignoreUUIDSet.find(fullPathUUID);
+                
+                if (it_UUID != _ignoreUUIDSet.end())
+                {
+                    continue;
+                }
+                
+                fileCount++;
+                
+                currentFile = new GFile(parent, fileFullPatn.c_str(), fullPathUUID, ptr);
                 parent->AppendChild(currentFile);
                 
                 if (currentFile->IsFolder())

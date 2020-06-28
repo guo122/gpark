@@ -26,16 +26,16 @@ void GPark::InitDB()
 {
     std::cout << "init..." << std::endl;
     
-    if (access((_WorkPath + "/" REPOS_PATH_DB).c_str(), F_OK) != -1)
+    if (access((_WorkPath + "/" GPARK_PATH_DB).c_str(), F_OK) != -1)
     {
         std::cout << "Reinitialized existing GPark repository." << std::endl;
     }
     else
     {
-        mkdir((_WorkPath + "/" REPOS_PATH_FOLDER).c_str(), S_IRWXU);
+        mkdir((_WorkPath + "/" GPARK_PATH_HOME).c_str(), S_IRWXU);
         
         std::ofstream ofile;
-        ofile.open((_WorkPath + "/" REPOS_PATH_INDEX).c_str(), std::ios::out);
+        ofile.open((_WorkPath + "/" GPARK_PATH_INDEX).c_str(), std::ios::out);
         ofile << "gpark 0.01" << std::endl;
 
         ofile.close();
@@ -102,7 +102,7 @@ bool GPark::DetectGParkPath()
     
     std::string currentStr = _WorkPath;
     
-    while (access((currentStr + "/" REPOS_PATH_DB).c_str(), F_OK) == -1)
+    while (access((currentStr + "/" GPARK_PATH_DB).c_str(), F_OK) == -1)
     {
         auto last_index = currentStr.find_last_of("/");
         currentStr.erase(currentStr.begin() + last_index, currentStr.end());
@@ -120,7 +120,7 @@ bool GPark::DetectGParkPath()
 
 void GPark::Status()
 {
-    _savedFileTree = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
+    _savedFileTree = LoadDB((_HomePath + "/" GPARK_PATH_DB).c_str());
     if (_savedFileTree)
     {
         GFileTree * nowFileTree = GFileMgr::LoadFromPath(_WorkPath.c_str());
@@ -145,7 +145,7 @@ void GPark::Tree(int depth)
 
 void GPark::Show(bool bVerbose, int depth)
 {
-    _savedFileTree = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
+    _savedFileTree = LoadDB((_HomePath + "/" GPARK_PATH_DB).c_str());
     if (_savedFileTree)
     {
         std::string treeStr;
@@ -162,7 +162,7 @@ void GPark::Show(bool bVerbose, int depth)
 
 void GPark::Save()
 {
-    _savedFileTree = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
+    _savedFileTree = LoadDB((_HomePath + "/" GPARK_PATH_DB).c_str());
     if (_savedFileTree)
     {
         std::vector<GFile *> changesList, missList, addList, detailAddList;
@@ -210,11 +210,11 @@ void GPark::Save()
 
 void GPark::Diff(const char * otherRepos_)
 {
-    _savedFileTree = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
+    _savedFileTree = LoadDB((_HomePath + "/" GPARK_PATH_DB).c_str());
     if (_savedFileTree)
      {
          std::string otherReposStr = otherRepos_;
-         otherReposStr += "/" REPOS_PATH_DB;
+         otherReposStr += "/" GPARK_PATH_DB;
          
          GFileTree * otherFileTree = LoadDB(otherReposStr.c_str());
          
@@ -269,7 +269,7 @@ GFileTree * GPark::LoadDB(const char * DBPath_)
 void GPark::SaveDB()
 {
     std::ofstream ofile;
-    ofile.open((_HomePath + "/" REPOS_PATH_DB).c_str(), std::ios::out | std::ios::binary);
+    ofile.open((_HomePath + "/" GPARK_PATH_DB).c_str(), std::ios::out | std::ios::binary);
     
     _savedFileTree->Refresh(true);
     size_t size = _savedFileTree->CheckSize() + DB_OFFSET_LENGTH;
@@ -295,7 +295,10 @@ GPark::GPark()
     getcwd(tmpChar, 1024);
     _WorkPath = tmpChar;
     
-    DetectGParkPath();
+    if (DetectGParkPath())
+    {
+        GFileMgr::LoadIgnoreFile(_HomePath);
+    }
 }
 
 GPark::~GPark()

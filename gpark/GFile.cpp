@@ -47,16 +47,15 @@ GFile::GFile(char * data_, size_t size_, long & parent_id_)
     delete [] buffer;
 }
 
-GFile::GFile(GFile * parent_, const char * fullPath_, struct dirent * dirent_, long id_)
+GFile::GFile(GFile * parent_, const char * fullPath_, const unsigned long & fullPathUUID_, struct dirent * dirent_, long id_)
     : _id(id_)
     , _parent(parent_)
     , _name("")
     , _bGenShaed(false)
-    , _FullPathUUID(0)
+    , _FullPathUUID(fullPathUUID_)
 {
     memset(_sha, 0, SHA_CHAR_LENGTH);
     strcpy(_fullPath, fullPath_);
-    _FullPathUUID = GFileMgr::GetUUID(_fullPath);
     
     if (_id == -1)
     {
@@ -203,7 +202,7 @@ bool GFile::IsDifferent(GFile * file_)
     {
         ret = true;
     }
-    else if (file_->Stat().st_mtimespec.tv_nsec != _stat.st_mtimespec.tv_nsec)
+    else if (file_->Stat().st_mtimespec.tv_sec != _stat.st_mtimespec.tv_sec)
     {
         if (memcmp(file_->Sha(), Sha(), SHA_CHAR_LENGTH) != 0)
         {

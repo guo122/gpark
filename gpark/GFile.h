@@ -16,7 +16,7 @@ class GFile
     friend GFileTree;
 public:
     GFile(char * data_, size_t size_, long & parent_id_);
-    GFile(GFile * parent_, const char * fullPath_ = "", struct dirent * dirent_ = nullptr, long id_ = -1);
+    GFile(GFile * parent_, const char * fullPath_ = "", const unsigned long & fullPathUUID_ = 0, struct dirent * dirent_ = nullptr, long id_ = -1);
     ~GFile();
     
 public:

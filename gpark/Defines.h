@@ -28,9 +28,10 @@
 #define CONSOLE_COLOR_FOLDER            "\033[34m"
 #define CONSOLE_COLOR_WHITE_BLACK       "\033[30;47m"
 
-#define REPOS_PATH_FOLDER               "_gpark"
-#define REPOS_PATH_INDEX                REPOS_PATH_FOLDER "/index"
-#define REPOS_PATH_DB                   REPOS_PATH_FOLDER "/db"
+#define GPARK_PATH_HOME                 "_gpark"
+#define GPARK_PATH_INDEX                GPARK_PATH_HOME "/index"
+#define GPARK_PATH_DB                   GPARK_PATH_HOME "/db"
+#define GPARK_PATH_IGNORE               GPARK_PATH_HOME "/ignore"
 
 #define FORMAT_FILESIZE_BUFFER_LENGTH   50
 
