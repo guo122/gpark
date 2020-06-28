@@ -151,21 +151,24 @@ void GFileMgr::DifferentFileList(GFileTree * thisFileTree, GFileTree * otherFile
     }
 }
 
-void GFileMgr::Tree(GFile * root, std::string * str, bool bVerbose, std::string tab)
+void GFileMgr::Tree(GFile * root, std::string * str, bool bVerbose, int depth, std::string tab)
 {
-    if (root->Parent())
+    if (depth != 0 && depth != 1)
     {
-        *str += tab + root->ToString(bVerbose) + "\n";
-        for (int i = 0; i < root->ChildrenSize(); ++i)
+        if (root->Parent())
         {
-            Tree(root->Children(i), str, bVerbose, tab + "|   ");
+            *str += tab + root->ToString(bVerbose) + "\n";
+            for (int i = 0; i < root->ChildrenSize(); ++i)
+            {
+                Tree(root->Children(i), str, bVerbose, depth - 1, tab + "|   ");
+            }
         }
-    }
-    else
-    {
-        for (int i = 0; i < root->ChildrenSize(); ++i)
+        else
         {
-            Tree(root->Children(i), str, bVerbose, "");
+            for (int i = 0; i < root->ChildrenSize(); ++i)
+            {
+                Tree(root->Children(i), str, bVerbose, depth - 1, "");
+            }
         }
     }
 }
@@ -195,7 +198,7 @@ void GFileMgr::LoadFolderImpl(std::string path, GFile * parent, int & fileCount)
             if (strcmp(ptr->d_name, ".") != 0 &&
                 strcmp(ptr->d_name, "..") != 0 &&
                 strcmp(ptr->d_name, ".DS_Store") != 0 &&
-//                strcmp(ptr->d_name, ".git") != 0 &&
+                strcmp(ptr->d_name, ".git") != 0 &&
                 strcmp(ptr->d_name, REPOS_PATH_FOLDER) != 0)
             {
                 fileCount++;

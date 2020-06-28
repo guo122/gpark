@@ -19,7 +19,7 @@ public:
                                   std::vector<GFile*> & missList,
                                   std::vector<GFile*> & addList,
                                   std::vector<GFile*> & detailAddList);
-    static void Tree(GFile * root, std::string * str, bool bVerbose, std::string tab = "");
+    static void Tree(GFile * root, std::string * str, bool bVerbose, int depth = -1, std::string tab = "");
     
 public:
     static unsigned long GetUUID(std::string fullPath_);

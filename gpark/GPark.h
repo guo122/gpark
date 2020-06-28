@@ -15,8 +15,8 @@ public:
 public:
     void InitDB();
     void Status();
-    void Tree();
-    void Show(bool bVerbose);
+    void Tree(int depth);
+    void Show(bool bVerbose, int depth);
     void Save();
     void Diff(const char * otherRepos_);
     

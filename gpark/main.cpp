@@ -3,7 +3,6 @@
 
 int main(int argc, const char * argv[])
 {
-//    GPark::Instance()->Save();
     if (argc == 1)
     {
         GPark::Instance()->Status();
@@ -16,17 +15,35 @@ int main(int argc, const char * argv[])
         }
         else if (strcmp(argv[1], "tree") == 0)
         {
-            GPark::Instance()->Tree();
-        }
-        else if (strcmp(argv[1], "show") == 0)
-        {
-            if (argc > 2 && strcmp(argv[2], "-v") == 0)
+            if (argc > 2)
             {
-                GPark::Instance()->Show(true);
+                GPark::Instance()->Tree(atoi(argv[2]) + 2);
             }
             else
             {
-                GPark::Instance()->Show(false);
+                GPark::Instance()->Tree(-1);
+            }
+        }
+        else if (strcmp(argv[1], "show") == 0)
+        {
+            if (argc > 2)
+            {
+                GPark::Instance()->Show(false, atoi(argv[2]) + 2);
+            }
+            else
+            {
+                GPark::Instance()->Show(false, -1);
+            }
+        }
+        else if (strcmp(argv[1], "showv") == 0)
+        {
+            if (argc > 2)
+            {
+                GPark::Instance()->Show(true, atoi(argv[2]) + 2);
+            }
+            else
+            {
+                GPark::Instance()->Show(true, -1);
             }
         }
         else if (strcmp(argv[1], "save") == 0)
@@ -41,8 +58,9 @@ int main(int argc, const char * argv[])
         {
             std::cout << "gpark usage:" << std::endl;
             std::cout << "\tgpark init" << std::endl;
-            std::cout << "\tgpark tree" << std::endl;
-            std::cout << "\tgpark show [-v]" << std::endl;
+            std::cout << "\tgpark tree [depth]" << std::endl;
+            std::cout << "\tgpark show [depth]" << std::endl;
+            std::cout << "\tgpark showv [depth]" << std::endl;
             std::cout << "\tgpark save" << std::endl;
             std::cout << "\tgpark diff <other repos>" << std::endl;
         }

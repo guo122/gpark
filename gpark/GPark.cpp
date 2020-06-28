@@ -134,23 +134,23 @@ void GPark::Status()
     }
 }
 
-void GPark::Tree()
+void GPark::Tree(int depth)
 {
     std::string treeStr;
     
-    GFileMgr::Tree(GFileMgr::LoadFromPath(_WorkPath.c_str())->Root(), &treeStr, false);
+    GFileMgr::Tree(GFileMgr::LoadFromPath(_WorkPath.c_str())->Root(), &treeStr, false, depth);
     
     std::cout << treeStr << std::endl;
 }
 
-void GPark::Show(bool bVerbose)
+void GPark::Show(bool bVerbose, int depth)
 {
     _savedFileTree = LoadDB((_HomePath + "/" REPOS_PATH_DB).c_str());
     if (_savedFileTree)
     {
         std::string treeStr;
         
-        GFileMgr::Tree(_savedFileTree->Root(), &treeStr, bVerbose);
+        GFileMgr::Tree(_savedFileTree->GetFile(GFileMgr::GetUUID(_WorkPath)), &treeStr, bVerbose, depth);
         
         std::cout << treeStr << std::endl;
     }
