@@ -24,7 +24,7 @@ public:
     GFile * Parent();
     struct stat & Stat();
     const char * CurrentPath();
-    const char * FullPath();
+    const std::string & FullPath();
     const unsigned long & FullPathUUID();
     const std::string & Name();
     unsigned char * Sha();
@@ -58,7 +58,7 @@ private:
     
     struct stat     _stat;
     
-    char     _fullPath[1024];
+    std::string     _fullPath;
     std::string     _name;
     bool            _bGenShaed;
     unsigned long   _FullPathUUID;

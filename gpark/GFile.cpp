@@ -55,7 +55,7 @@ GFile::GFile(GFile * parent_, const char * fullPath_, const unsigned long & full
     , _FullPathUUID(fullPathUUID_)
 {
     memset(_sha, 0, SHA_CHAR_LENGTH);
-    strcpy(_fullPath, fullPath_);
+    _fullPath = fullPath_;
     
     if (_id == -1)
     {
@@ -66,7 +66,7 @@ GFile::GFile(GFile * parent_, const char * fullPath_, const unsigned long & full
     {
         _name = dirent_->d_name;
     }
-    stat(_fullPath, &_stat);
+    stat(_fullPath.c_str(), &_stat);
 }
 
 GFile::~GFile()
@@ -89,16 +89,16 @@ struct stat & GFile::Stat()
 }
 const char * GFile::CurrentPath()
 {
-    if (GPark::Instance()->GetWorkPath().size() >= strlen(FullPath()))
+    if (GPark::Instance()->GetWorkPath().size() >= _fullPath.size())
     {
         return "./";
     }
     else
     {
-        return FullPath() + GPark::Instance()->GetWorkPath().size() + 1;
+        return _fullPath.c_str() + GPark::Instance()->GetWorkPath().size() + 1;
     }
 }
-const char * GFile::FullPath()
+const std::string & GFile::FullPath()
 {
     return _fullPath;
 }
@@ -116,7 +116,7 @@ unsigned char * GFile::Sha()
     {
         _bGenShaed = true;
         
-        if (!Name().empty() && strlen(FullPath()) > 0 && !IsFolder())
+        if (!Name().empty() && !_fullPath.empty() && !IsFolder())
         {
             char sizeBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
             GTools::FormatFileSize(_stat.st_size, sizeBuf);
@@ -124,7 +124,7 @@ unsigned char * GFile::Sha()
             
             SHA_CTX ctx;
             std::ifstream ifile;
-            ifile.open(FullPath(), std::ios::in | std::ios::binary);
+            ifile.open(_fullPath.c_str(), std::ios::in | std::ios::binary);
             char * buffer = new char[_stat.st_size];
             ifile.read(buffer, _stat.st_size);
             
@@ -170,7 +170,7 @@ void GFile::CopyFrom(GFile * file_)
 
 void GFile::GenFullPath()
 {
-    sprintf(_fullPath, "%s/%s", _parent->FullPath(), _name.c_str());
+    _fullPath = _parent->FullPath() + "/" + _name;
     _FullPathUUID = GFileMgr::GetUUID(_fullPath);
 }
 
@@ -221,8 +221,8 @@ bool GFile::IsChild(GFile * file_)
     bool ret = false;
     
     
-    if (strlen(file_->FullPath()) > strlen(FullPath()) &&
-        strncmp(FullPath(), file_->FullPath(), strlen(FullPath())) == 0)
+    if (file_->FullPath().size() > _fullPath.size() &&
+        strncmp(_fullPath.c_str(), file_->FullPath().c_str(), _fullPath.size()) == 0)
     {
         ret = true;
     }

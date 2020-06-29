@@ -177,7 +177,7 @@ void GPark::Save()
         for (int i = 0; i < missList.size(); ++i)
         {
             cur = _savedFileTree->GetFile(missList[i]->FullPathUUID());
-            GAssert(cur != nullptr, "save error. can't find %s", missList[i]->FullPath());
+            GAssert(cur != nullptr, "save error. can't find %s", missList[i]->FullPath().c_str());
             
             cur->Parent()->RemoveChild(cur);
         }
@@ -185,7 +185,7 @@ void GPark::Save()
         for (int i = 0; i < changesList.size(); ++i)
         {
             cur = _savedFileTree->GetFile(changesList[i]->FullPathUUID());
-            GAssert(cur != nullptr, "save error. can't find %s", changesList[i]->FullPath());
+            GAssert(cur != nullptr, "save error. can't find %s", changesList[i]->FullPath().c_str());
             
             cur->CopyFrom(changesList[i]);
         }
@@ -193,7 +193,7 @@ void GPark::Save()
         for (int i = 0; i < addList.size(); ++i)
         {
             cur = _savedFileTree->GetFile(addList[i]->Parent()->FullPathUUID());
-            GAssert(cur != nullptr, "save error. can't find %s", addList[i]->Parent()->FullPath());
+            GAssert(cur != nullptr, "save error. can't find %s", addList[i]->Parent()->FullPath().c_str());
             
             cur->AppendChild(addList[i]);
             _savedFileTree->Refresh(false);

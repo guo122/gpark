@@ -72,7 +72,7 @@ GFileTree * GFileMgr::LoadFromDB(char * data_, size_t size_)
         cur->GenFullPath();
         
         it = gfileMap.find(cur->Id());
-        GAssert(it == gfileMap.end(), "same id %ld (%s)", cur->Id(), cur->FullPath());
+        GAssert(it == gfileMap.end(), "same id %ld (%s)", cur->Id(), cur->FullPath().c_str());
         
         gfileMap.insert(std::pair<long, GFile*>(cur->Id(), cur));
         
