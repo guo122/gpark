@@ -35,7 +35,72 @@ GFileTree * GFileMgr::LoadFromPath(const char * path_)
     int fileCount = 0;
     
     std::cout << "load...";
-    LoadFolderImpl(path_, root, fileCount);
+//    LoadFolderImpl(path_, root, fileCount);
+    std::vector<GFile *> cacheFileList;
+    cacheFileList.push_back(root);
+    
+    DIR * dir = nullptr;
+    std::set<std::string>::iterator it_name = _ignoreNameSet.end();
+    std::set<unsigned long>::iterator it_UUID = _ignoreUUIDSet.end();
+    struct dirent * ptr;
+    GFile * parent = nullptr;
+    GFile * cur = nullptr;
+    std::string fileFullPatn;
+    
+    std::string::size_type cacheIndex = 0;
+    while (cacheIndex < cacheFileList.size())
+    {
+        parent = cacheFileList[cacheIndex];
+        dir = opendir(parent->FullPath().c_str());
+        
+        if (dir)
+        {
+            while ((ptr = readdir(dir)) != nullptr)
+            {
+                it_name = _ignoreNameSet.find(ptr->d_name);
+                if (it_name != _ignoreNameSet.end())
+                {
+                    continue;
+                }
+                
+                if (strcmp(ptr->d_name, ".") != 0 &&
+                    strcmp(ptr->d_name, "..") != 0 &&
+                    strcmp(ptr->d_name, GPARK_PATH_HOME) != 0)
+                {
+                    fileFullPatn = parent->FullPath() + "/" + ptr->d_name;
+                    unsigned long fullPathUUID = GetUUID(fileFullPatn);
+                    
+                    it_UUID = _ignoreUUIDSet.find(fullPathUUID);
+                    
+                    if (it_UUID != _ignoreUUIDSet.end())
+                    {
+                        continue;
+                    }
+                    
+                    fileCount++;
+                    
+                    cur = new GFile(parent, fileFullPatn.c_str(), fullPathUUID, ptr);
+                    parent->AppendChild(cur);
+                    
+                    if (cur->IsFolder())
+                    {
+                        cacheFileList.push_back(cur);
+                    }
+                }
+            }
+            
+            parent->SortChildren();
+        }
+        else
+        {
+            std::cout << "error id: [" << errno << "] can't open: (" << parent->FullPath() << ")" << std::endl;
+        }
+        
+        closedir(dir);
+        ++cacheIndex;
+    }
+    
+    
     std::cout << "done(" CONSOLE_COLOR_FONT_CYAN << fileCount << CONSOLE_COLOR_END " files)" << std::endl;
     
     return new GFileTree(root);
