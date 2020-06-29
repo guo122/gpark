@@ -34,7 +34,7 @@ GFileTree * GFileMgr::LoadFromPath(const char * path_)
     GFile * root = new GFile(nullptr, path_, GetUUID(path_), nullptr);
     int fileCount = 0;
     
-    std::cout << "load...";
+    std::cout << "loading...folder ";
 //    LoadFolderImpl(path_, root, fileCount);
     std::vector<GFile *> cacheFileList;
     cacheFileList.push_back(root);
@@ -100,8 +100,7 @@ GFileTree * GFileMgr::LoadFromPath(const char * path_)
         ++cacheIndex;
     }
     
-    
-    std::cout << "done(" CONSOLE_COLOR_FONT_CYAN << fileCount << CONSOLE_COLOR_END " files)" << std::endl;
+    std::cout << "(" CONSOLE_COLOR_FONT_CYAN << fileCount << CONSOLE_COLOR_END " files)" << std::endl;
     
     return new GFileTree(root);
 }
@@ -392,7 +391,10 @@ void GFileMgr::ExpandMissIgnoreSet(GFileTree * fileTree, std::set<unsigned long>
     for (auto x : _missignoreUUIDSet)
     {
         GFile * file = fileTree->GetFile(x);
-        ExpandMissIgnoreSetImpl(file, expandMissignoreSet);
+        if (file)
+        {
+            ExpandMissIgnoreSetImpl(file, expandMissignoreSet);
+        }
     }
 }
 

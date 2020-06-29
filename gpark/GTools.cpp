@@ -26,6 +26,30 @@ void GTools::FormatFileSize(long long size_, char * str)
     }
 }
 
+std::string GTools::FormatShaToHex(unsigned char * sha_)
+{
+    std::string ret;
+    char tempChar[3];
+    for (int i = 0; i < SHA_CHAR_LENGTH; i++) {
+        sprintf(tempChar, "%02x", sha_[i]);
+        ret += tempChar;
+    }
+    return ret;
+}
+
+std::string GTools::FormatTimestampToYYMMDD_HHMMSS(long timestamp_)
+{
+    char charBuffer[100];
+    
+    struct tm * tmpTm;
+    time_t lt = timestamp_;
+    tmpTm = localtime(&lt);
+    
+    strftime(charBuffer, 100, "%y%m%d_%H%M%S", tmpTm);
+    
+    return charBuffer;
+}
+
 GTools::GTools()
 {
     

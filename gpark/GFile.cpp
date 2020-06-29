@@ -120,7 +120,7 @@ unsigned char * GFile::Sha()
         {
             char sizeBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
             GTools::FormatFileSize(_stat.st_size, sizeBuf);
-            std::cout << "calculate sha (" << sizeBuf << ")" << std::flush;
+            std::cout << "calculate sha (" << sizeBuf << ") " << _name << ".  " << std::flush;
             
             SHA_CTX ctx;
             std::ifstream ifile;
@@ -249,11 +249,9 @@ std::string GFile::ToString(bool bVerbose)
     SaveSize();
     
     char tempChar[300];
-    std::string ret;
     if (IsFolder())
     {
         sprintf(tempChar, CONSOLE_COLOR_FOLDER "%s/" CONSOLE_COLOR_END, _name.c_str());
-        ret = tempChar;
     }
     else
     {
@@ -262,22 +260,15 @@ std::string GFile::ToString(bool bVerbose)
         
         if (bVerbose)
         {
-            sprintf(tempChar, "%s (%s), ", _name.c_str(), sizeBuf);
-            
-            ret = tempChar;
-            for (int i = 0; i < SHA_CHAR_LENGTH; i++) {
-                sprintf(tempChar, "%02x", _sha[i]);
-                ret += tempChar;
-            }
+            sprintf(tempChar, "%s (%s), %s", _name.c_str(), sizeBuf, GTools::FormatShaToHex(_sha).c_str());
         }
         else
         {
             sprintf(tempChar, "%s (%s)", _name.c_str(), sizeBuf);
-            ret = tempChar;
         }
     }
     
-    return ret;
+    return tempChar;
 }
 
 size_t GFile::ToBin(char * data_, size_t offset_)

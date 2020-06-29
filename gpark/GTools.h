@@ -8,6 +8,8 @@ class GTools
 {
 public:
     static void FormatFileSize(long long size_, char * str);
+    static std::string FormatShaToHex(unsigned char * sha_);
+    static std::string FormatTimestampToYYMMDD_HHMMSS(long timestamp_);
     
 private:
     GTools();

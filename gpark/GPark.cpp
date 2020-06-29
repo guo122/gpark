@@ -5,8 +5,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <openssl/sha.h>
+
 #include "GPark.h"
 
+#include "GTools.h"
 #include "GFileMgr.h"
 #include "GFile.h"
 #include "GFileTree.h"
@@ -249,19 +252,24 @@ GFileTree * GPark::LoadDB(const char * DBPath_)
     
     if (ifile.is_open())
     {
-        char * readBuffer = new char[DB_OFFSET_LENGTH];
+        unsigned char dbSha[SHA_CHAR_LENGTH];
+        struct stat dbStat;
+        stat(DBPath_, &dbStat);
         
-        ifile.read(readBuffer, DB_OFFSET_LENGTH);
+        char * readBuffer = new char[dbStat.st_size];
+        ifile.read(readBuffer, dbStat.st_size);
         
-        size_t size = *((size_t*)readBuffer);
-        delete[] readBuffer;
-        
-        readBuffer = new char[size - DB_OFFSET_LENGTH];
-        ifile.read(readBuffer, size - DB_OFFSET_LENGTH);
-        ret = GFileMgr::LoadFromDB(readBuffer, size - DB_OFFSET_LENGTH);
+        SHA_CTX ctx;
+        SHA1_Init(&ctx);
+        SHA1_Update(&ctx, readBuffer, dbStat.st_size);
+        SHA1_Final(dbSha, &ctx);
+        std::cout << "loading...DB(" CONSOLE_COLOR_FONT_CYAN << GTools::FormatShaToHex(dbSha) << CONSOLE_COLOR_END ")" CONSOLE_COLOR_FONT_YELLOW << GTools::FormatTimestampToYYMMDD_HHMMSS(dbStat.st_mtimespec.tv_sec) << CONSOLE_COLOR_END << std::endl;
+   
+        ret = GFileMgr::LoadFromDB(readBuffer + DB_OFFSET_LENGTH, dbStat.st_size - DB_OFFSET_LENGTH);
         
         ifile.close();
         delete [] readBuffer;
+        
     }
     
     return ret;
