@@ -14,7 +14,7 @@ public:
     
 public:
     void InitDB();
-    void Status();
+    void Status(bool bMissignore);
     void Tree(int depth);
     void Show(bool bVerbose, int depth);
     void Save();
@@ -27,7 +27,7 @@ public:
     std::string GetHomePath();
     
 private:
-    void DiffRepos(GFileTree * thisRepos, GFileTree * otherRepos);
+    void DiffRepos(bool bMissignore, GFileTree * thisRepos, GFileTree * otherRepos);
     bool DetectGParkPath();
     GFileTree * LoadDB(const char * DBPath_);
     void SaveDB();

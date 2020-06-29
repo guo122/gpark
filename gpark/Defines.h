@@ -32,6 +32,7 @@
 #define GPARK_PATH_INDEX                GPARK_PATH_HOME "/index"
 #define GPARK_PATH_DB                   GPARK_PATH_HOME "/db"
 #define GPARK_PATH_IGNORE               GPARK_PATH_HOME "/ignore"
+#define GPARK_PATH_MISS_IGNORE          GPARK_PATH_HOME "/missignore"
 
 #define FORMAT_FILESIZE_BUFFER_LENGTH   50
 

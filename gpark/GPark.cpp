@@ -60,11 +60,11 @@ std::string GPark::GetHomePath()
     return _HomePath;
 }
 
-void GPark::DiffRepos(GFileTree * thisRepos, GFileTree * otherRepos)
+void GPark::DiffRepos(bool bMissignore, GFileTree * thisRepos, GFileTree * otherRepos)
 {
-    std::vector<GFile *> changesList, missList, addList, detailAddList;
+    std::vector<GFile *> changesList, missList, addList;
     
-    GFileMgr::DifferentFileList(thisRepos, otherRepos, changesList, missList, addList, detailAddList);
+    GFileMgr::DifferentFileList(bMissignore, thisRepos, otherRepos, changesList, missList, addList);
     
     for (int i = 0; i < changesList.size(); ++i)
     {
@@ -118,7 +118,7 @@ bool GPark::DetectGParkPath()
     return ret;
 }
 
-void GPark::Status()
+void GPark::Status(bool bMissignore)
 {
     _savedFileTree = LoadDB((_HomePath + "/" GPARK_PATH_DB).c_str());
     if (_savedFileTree)
@@ -126,7 +126,7 @@ void GPark::Status()
         GFileTree * nowFileTree = GFileMgr::LoadFromPath(_WorkPath.c_str());
         GFileTree * thisFileTree = _savedFileTree->GetSubTree(nowFileTree->Root()->FullPathUUID());
         
-        DiffRepos(thisFileTree, nowFileTree);
+        DiffRepos(bMissignore, thisFileTree, nowFileTree);
     }
     else
     {
@@ -136,6 +136,7 @@ void GPark::Status()
 
 void GPark::Tree(int depth)
 {
+    // todo(gzy): tree show miss ignore.
     std::string treeStr;
     
     GFileMgr::Tree(GFileMgr::LoadFromPath(_WorkPath.c_str())->Root(), &treeStr, false, depth);
@@ -165,12 +166,12 @@ void GPark::Save()
     _savedFileTree = LoadDB((_HomePath + "/" GPARK_PATH_DB).c_str());
     if (_savedFileTree)
     {
-        std::vector<GFile *> changesList, missList, addList, detailAddList;
+        std::vector<GFile *> changesList, missList, addList;
         
         GFileTree * nowFileTree = GFileMgr::LoadFromPath(_WorkPath.c_str());
         GFileTree * thisFileTree = _savedFileTree->GetSubTree(nowFileTree->Root()->FullPathUUID());
         
-        GFileMgr::DifferentFileList(thisFileTree, nowFileTree, changesList, missList, addList, detailAddList);
+        GFileMgr::DifferentFileList(true, thisFileTree, nowFileTree, changesList, missList, addList);
         
         GFile * cur = nullptr;
         for (int i = 0; i < missList.size(); ++i)
@@ -224,7 +225,7 @@ void GPark::Diff(const char * otherRepos_)
          }
          else
          {
-             DiffRepos(_savedFileTree, otherFileTree);
+             DiffRepos(false, _savedFileTree, otherFileTree);
          }
      }
      else
@@ -298,6 +299,7 @@ GPark::GPark()
     if (DetectGParkPath())
     {
         GFileMgr::LoadIgnoreFile(_HomePath);
+        GFileMgr::LoadMissIgnoreFile(_HomePath);
     }
 }
 

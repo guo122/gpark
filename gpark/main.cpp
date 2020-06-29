@@ -5,13 +5,17 @@ int main(int argc, const char * argv[])
 {
     if (argc == 1)
     {
-        GPark::Instance()->Status();
+        GPark::Instance()->Status(true);
     }
     else if (argc > 1)
     {
         if (strcmp(argv[1], "init") == 0)
         {
             GPark::Instance()->InitDB();
+        }
+        if (strcmp(argv[1], "status") == 0)
+        {
+            GPark::Instance()->Status(false);
         }
         else if (strcmp(argv[1], "tree") == 0)
         {
@@ -56,8 +60,10 @@ int main(int argc, const char * argv[])
         }
         else
         {
+            // todo(gzy): opt arguments.
             std::cout << "gpark usage:" << std::endl;
             std::cout << "\tgpark init" << std::endl;
+            std::cout << "\tgpark status" << std::endl;
             std::cout << "\tgpark tree [depth]" << std::endl;
             std::cout << "\tgpark show [depth]" << std::endl;
             std::cout << "\tgpark showv [depth]" << std::endl;

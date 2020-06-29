@@ -17,6 +17,7 @@ unsigned long GFileMgr::_UUID_Automatic = 0;
 
 std::set<std::string> GFileMgr::_ignoreNameSet;
 std::set<unsigned long> GFileMgr::_ignoreUUIDSet;
+std::set<unsigned long> GFileMgr::_missignoreUUIDSet;
 
 GFileMgr::GFileMgr()
 {
@@ -35,7 +36,7 @@ GFileTree * GFileMgr::LoadFromPath(const char * path_)
     
     std::cout << "load...";
     LoadFolderImpl(path_, root, fileCount);
-    std::cout << "done(" << fileCount << ")" << std::endl;
+    std::cout << "done(" CONSOLE_COLOR_FONT_CYAN << fileCount << CONSOLE_COLOR_END " files)" << std::endl;
     
     return new GFileTree(root);
 }
@@ -115,15 +116,44 @@ void GFileMgr::LoadIgnoreFile(std::string homePath_)
     }
 }
 
-void GFileMgr::DifferentFileList(GFileTree * thisFileTree, GFileTree * otherFileTree,
+void GFileMgr::LoadMissIgnoreFile(std::string homePath_)
+{
+    std::ifstream ifile;
+    
+    ifile.open((homePath_ + "/" GPARK_PATH_MISS_IGNORE).c_str(), std::ios::in);
+    
+    if (ifile.is_open())
+    {
+        std::string tempStr = "";
+        while (getline(ifile, tempStr))
+        {
+            if (!tempStr.empty() && tempStr[0] != '/')
+            {
+                if (tempStr[tempStr.size() - 1] == '/')
+                {
+                    tempStr.erase(tempStr.end() - 1);
+                }
+                tempStr = homePath_ + "/" + tempStr;
+                _missignoreUUIDSet.insert(GetUUID(tempStr));
+            }
+        }
+        ifile.close();
+    }
+}
+
+void GFileMgr::DifferentFileList(bool bMissIgnore,
+                                 GFileTree * thisFileTree, GFileTree * otherFileTree,
                                  std::vector<GFile*> & changesList,
                                  std::vector<GFile*> & missList,
-                                 std::vector<GFile*> & addList,
-                                 std::vector<GFile*> & detailAddList)
+                                 std::vector<GFile*> & addList)
 {
     std::vector<GFile*> folderList;
     const std::vector<GFile*> & thisFileList = thisFileTree->GetFileList();
     const std::vector<GFile*> & otherFileList = otherFileTree->GetFileList();
+    
+    std::set<unsigned long> expandMissignoreSet;
+    ExpandMissIgnoreSet(thisFileTree, expandMissignoreSet);
+    std::set<unsigned long>::iterator it_missignoreUUID = expandMissignoreSet.end();
     
     GFile * cur = nullptr;
     bool bInFolder = false;
@@ -156,7 +186,18 @@ void GFileMgr::DifferentFileList(GFileTree * thisFileTree, GFileTree * otherFile
                 {
                     folderList.push_back(thisFileList[i]);
                 }
-                missList.push_back(thisFileList[i]);
+                if (bMissIgnore)
+                {
+                    it_missignoreUUID = expandMissignoreSet.find(thisFileList[i]->FullPathUUID());
+                    if (it_missignoreUUID == expandMissignoreSet.end())
+                    {
+                        missList.push_back(thisFileList[i]);
+                    }
+                }
+                else
+                {
+                    missList.push_back(thisFileList[i]);
+                }
             }
         }
     }
@@ -184,7 +225,6 @@ void GFileMgr::DifferentFileList(GFileTree * thisFileTree, GFileTree * otherFile
                 }
                 addList.push_back(otherFileList[i]);
             }
-            detailAddList.push_back(otherFileList[i]);
         }
     }
 }
@@ -275,4 +315,24 @@ void GFileMgr::LoadFolderImpl(std::string path, GFile * parent, int & fileCount)
     }
     
     closedir(dir);
+}
+
+void GFileMgr::ExpandMissIgnoreSet(GFileTree * fileTree, std::set<unsigned long> & expandMissignoreSet)
+{
+    expandMissignoreSet.clear();
+    for (auto x : _missignoreUUIDSet)
+    {
+        GFile * file = fileTree->GetFile(x);
+        ExpandMissIgnoreSetImpl(file, expandMissignoreSet);
+    }
+}
+
+void GFileMgr::ExpandMissIgnoreSetImpl(GFile * file_, std::set<unsigned long> & expandMissignoreSet)
+{
+    expandMissignoreSet.insert(file_->FullPathUUID());
+    
+    for (int i = 0; i < file_->ChildrenSize(); ++i)
+    {
+        ExpandMissIgnoreSetImpl(file_->Children(i), expandMissignoreSet);
+    }
 }
