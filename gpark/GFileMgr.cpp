@@ -90,13 +90,13 @@ GFileTree * GFileMgr::LoadFromPath(const char * path_)
             }
             
             parent->SortChildren();
+            closedir(dir);
         }
         else
         {
-            std::cout << "error id: [" << errno << "] can't open: (" << parent->FullPath() << ")" << std::endl;
+            std::cout << "error id: [" << errno << "], can't open: (" << parent->FullPath() << ")" << std::endl;
         }
         
-        closedir(dir);
         ++cacheIndex;
     }
     
@@ -212,6 +212,10 @@ void GFileMgr::DifferentFileList(bool bMissIgnore,
                                  std::vector<GFile*> & missList,
                                  std::vector<GFile*> & addList)
 {
+    if (!thisFileTree || !otherFileTree)
+    {
+        return;
+    }
     std::vector<GFile*> folderList;
     const std::vector<GFile*> & thisFileList = thisFileTree->GetFileList();
     const std::vector<GFile*> & otherFileList = otherFileTree->GetFileList();

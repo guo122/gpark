@@ -48,6 +48,7 @@
 #define GAssert(expression, format, ...) \
 if (!(expression)) { \
 printf(CONSOLE_COLOR_FONT_RED "[Assert]" CONSOLE_COLOR_END "[%s/%s](%d) " format "\n", __FILE_NAME__, __FUNCTION__, __LINE__, ##__VA_ARGS__);\
+exit(-1);\
 };
 
 #endif /* _DEFINES_H_ */
