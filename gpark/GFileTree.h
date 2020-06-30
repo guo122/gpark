@@ -17,8 +17,8 @@ public:
     
 public:
     GFile * Root();
-    GFile * GetFile(const unsigned long & fullPathUUID_);
-    GFileTree * GetSubTree(const unsigned long & fullPathUUID_);
+    GFile * GetFile(const char * globalFullPath_);
+    GFileTree * GetSubTree(const char * globalFullPath_);
     const std::vector<GFile*> & GetFileList();
     
 public:
@@ -34,7 +34,7 @@ private:
 private:
     GFile * _root;
     std::vector<GFile*> _fileList;
-    std::map<unsigned long, GFile*> _fileMap;
+    std::map<const char *, GFile*> _fileMap;
 };
 
 #endif /* _GFILETREE_H_ */

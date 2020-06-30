@@ -13,10 +13,10 @@ class GFileTree;
 class GFileMgr
 {
 public:
-    static GFileTree * LoadFromPath(const char * path_);
+    static GFileTree * LoadFromPath(const char * globalPath_);
     static GFileTree * LoadFromDB(char * data_, size_t size_);
-    static void LoadIgnoreFile(std::string homePath_);
-    static void LoadMissIgnoreFile(std::string homePath_);
+    static void LoadIgnoreFile(const char * globalHomePath_);
+    static void LoadMissIgnoreFile(const char * globalHomePath_);
     static void DifferentFileList(bool bMissIgnore,
                                   GFileTree * thisFileTree, GFileTree * otherFileTree,
                                   std::vector<GFile*> & changesList,
@@ -25,20 +25,19 @@ public:
     static void Tree(GFile * root, std::string * str, bool bVerbose, int depth = -1, std::string tab = "");
     
 public:
-    static unsigned long GetUUID(std::string fullPath_);
+    static const char * GetGlobalFullPath(const char * parentPath_, const char * name_);
+    static const char * GetGlobalFullPath(const char * fullPath_);
     
 private:
-    static void LoadFolderImpl(std::string path, GFile * parent, int & fileCount);
-    static void ExpandMissIgnoreSet(GFileTree * fileTree, std::set<unsigned long> & expandMissignoreSet);
-    static void ExpandMissIgnoreSetImpl(GFile * file_, std::set<unsigned long> & expandMissignoreSet);
+    static void ExpandMissIgnoreSet(GFileTree * fileTree, std::set<const char *> & expandMissignoreSet_);
+    static void ExpandMissIgnoreSetImpl(GFile * file_, std::set<const char *> & expandMissignoreSet_);
     
 private:
-    static std::map<std::string, unsigned long> _FullPathUUIDMap;
-    static unsigned long _UUID_Automatic;
+    static std::set<const char *, STRCMP_Compare> _GlobalFullPathSet;
     
     static std::set<std::string>     _ignoreNameSet;
-    static std::set<unsigned long>   _ignoreUUIDSet;
-    static std::set<unsigned long>   _missignoreUUIDSet;
+    static std::set<const char *>   _ignoreGlobalFullPathSet;
+    static std::set<const char *>   _missignoreGlobalFullPathSet;
     
 private:
     GFileMgr();

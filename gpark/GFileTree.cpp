@@ -19,11 +19,11 @@ GFile * GFileTree::Root()
     return _root;
 }
 
-GFile * GFileTree::GetFile(const unsigned long & fullPathUUID_)
+GFile * GFileTree::GetFile(const char * globalFullPath_)
 {
     GFile * ret = nullptr;
     
-    auto it = _fileMap.find(fullPathUUID_);
+    auto it = _fileMap.find(globalFullPath_);
     if (it != _fileMap.end())
     {
         ret = it->second;
@@ -32,11 +32,11 @@ GFile * GFileTree::GetFile(const unsigned long & fullPathUUID_)
     return ret;
 }
 
-GFileTree * GFileTree::GetSubTree(const unsigned long & fullPathUUID_)
+GFileTree * GFileTree::GetSubTree(const char * globalFullPath_)
 {
     GFileTree * ret = nullptr;
     
-    auto it = _fileMap.find(fullPathUUID_);
+    auto it = _fileMap.find(globalFullPath_);
     if (it != _fileMap.end())
     {
         ret = new GFileTree(it->second);
@@ -79,7 +79,7 @@ void GFileTree::Refresh(bool bRefreshID)
     _fileMap.clear();
     for (int i = 0; i < _fileList.size(); ++i)
     {
-        _fileMap.insert(std::pair<unsigned long, GFile *>(_fileList[i]->FullPathUUID(), _fileList[i]));
+        _fileMap.insert(std::pair<const char *, GFile *>(_fileList[i]->GlobalFullPath(), _fileList[i]));
     }
     
     if (bRefreshID)

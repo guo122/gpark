@@ -12,12 +12,11 @@
 
 #include "GFileMgr.h"
 
-std::map<std::string, unsigned long> GFileMgr::_FullPathUUIDMap;
-unsigned long GFileMgr::_UUID_Automatic = 0;
+std::set<const char *, STRCMP_Compare> GFileMgr::_GlobalFullPathSet;
 
 std::set<std::string> GFileMgr::_ignoreNameSet;
-std::set<unsigned long> GFileMgr::_ignoreUUIDSet;
-std::set<unsigned long> GFileMgr::_missignoreUUIDSet;
+std::set<const char *> GFileMgr::_ignoreGlobalFullPathSet;
+std::set<const char *> GFileMgr::_missignoreGlobalFullPathSet;
 
 GFileMgr::GFileMgr()
 {
@@ -29,30 +28,28 @@ GFileMgr::~GFileMgr()
     
 }
 
-GFileTree * GFileMgr::LoadFromPath(const char * path_)
+GFileTree * GFileMgr::LoadFromPath(const char * globalPath_)
 {
-    GFile * root = new GFile(nullptr, path_, GetUUID(path_), nullptr);
+    GFile * root = new GFile(nullptr, globalPath_, nullptr);
     int fileCount = 0;
     
     std::cout << "loading...folder ";
-//    LoadFolderImpl(path_, root, fileCount);
     std::vector<GFile *> cacheFileList;
     cacheFileList.push_back(root);
     
     DIR * dir = nullptr;
     std::set<std::string>::iterator it_name = _ignoreNameSet.end();
-    std::set<unsigned long>::iterator it_UUID = _ignoreUUIDSet.end();
+    std::set<const char *>::iterator it_fullpath = _ignoreGlobalFullPathSet.end();
     struct dirent * ptr;
     GFile * parent = nullptr;
     GFile * cur = nullptr;
-    char fileFullPath[FULLPATH_DEFAULT_BUFFER_LENGTH];
-    size_t parentFullPathLength = 0;
+    const char * globalFullPath = nullptr;
     
     std::string::size_type cacheIndex = 0;
     while (cacheIndex < cacheFileList.size())
     {
         parent = cacheFileList[cacheIndex];
-        dir = opendir(parent->FullPath());
+        dir = opendir(parent->GlobalFullPath());
         
         if (dir)
         {
@@ -68,25 +65,18 @@ GFileTree * GFileMgr::LoadFromPath(const char * path_)
                     strcmp(ptr->d_name, "..") != 0 &&
                     strcmp(ptr->d_name, GPARK_PATH_HOME) != 0)
                 {
-                    parentFullPathLength = strlen(parent->FullPath());
-                    strncpy(fileFullPath, parent->FullPath(), parentFullPathLength);
-                    strncpy(fileFullPath + parentFullPathLength, "/", 1);
-                    strncpy(fileFullPath + parentFullPathLength + 1, ptr->d_name, ptr->d_namlen);
-                    fileFullPath[parentFullPathLength + 1 + ptr->d_namlen] = 0;
-                    GAssert(parentFullPathLength + 1 + ptr->d_namlen < FULLPATH_DEFAULT_BUFFER_LENGTH, "full path length(%ld) out buffer length(%d). path: %s, name: %s", parentFullPathLength + 1 + ptr->d_namlen, FULLPATH_DEFAULT_BUFFER_LENGTH, parent->FullPath(), ptr->d_name);
+                    globalFullPath = GetGlobalFullPath(parent->GlobalFullPath(), ptr->d_name);
+
+                    it_fullpath = _ignoreGlobalFullPathSet.find(globalFullPath);
                     
-                    unsigned long fullPathUUID = GetUUID(fileFullPath);
-                    
-                    it_UUID = _ignoreUUIDSet.find(fullPathUUID);
-                    
-                    if (it_UUID != _ignoreUUIDSet.end())
+                    if (it_fullpath != _ignoreGlobalFullPathSet.end())
                     {
                         continue;
                     }
                     
                     fileCount++;
                     
-                    cur = new GFile(parent, fileFullPath, fullPathUUID, ptr);
+                    cur = new GFile(parent, globalFullPath, ptr);
                     parent->AppendChild(cur);
                     
                     if (cur->IsFolder())
@@ -101,7 +91,7 @@ GFileTree * GFileMgr::LoadFromPath(const char * path_)
         }
         else
         {
-            std::cout << "error id: [" << errno << "], can't open: (" << parent->FullPath() << ")" << std::endl;
+            std::cout << "error id: [" << errno << "], can't open: (" << parent->GlobalFullPath() << ")" << std::endl;
         }
         
         ++cacheIndex;
@@ -111,7 +101,6 @@ GFileTree * GFileMgr::LoadFromPath(const char * path_)
     
     return new GFileTree(root);
 }
-
 
 GFileTree * GFileMgr::LoadFromDB(char * data_, size_t size_)
 {
@@ -131,7 +120,7 @@ GFileTree * GFileMgr::LoadFromDB(char * data_, size_t size_)
         cur = new GFile(data_ + offset, size, parent_id);
         if (root == nullptr)
         {
-            root = new GFile(nullptr, GPark::Instance()->GetHomePath().c_str(), GetUUID(GPark::Instance()->GetHomePath()), nullptr, parent_id);
+            root = new GFile(nullptr, GPark::Instance()->GetGlobalHomePath(), nullptr, parent_id);
             gfileMap.insert(std::pair<long, GFile*>(parent_id, root));
         }
         
@@ -143,7 +132,7 @@ GFileTree * GFileMgr::LoadFromDB(char * data_, size_t size_)
         cur->GenFullPath();
         
         it = gfileMap.find(cur->Id());
-        GAssert(it == gfileMap.end(), "same id %ld (%s)", cur->Id(), cur->FullPath());
+        GAssert(it == gfileMap.end(), "same id %ld (%s)", cur->Id(), cur->GlobalFullPath());
         
         gfileMap.insert(std::pair<long, GFile*>(cur->Id(), cur));
         
@@ -153,11 +142,12 @@ GFileTree * GFileMgr::LoadFromDB(char * data_, size_t size_)
     return new GFileTree(root);
 }
 
-void GFileMgr::LoadIgnoreFile(std::string homePath_)
+void GFileMgr::LoadIgnoreFile(const char * globalHomePath_)
 {
     std::ifstream ifile;
+    std::string homePathStr = globalHomePath_;
     
-    ifile.open((homePath_ + "/" GPARK_PATH_IGNORE).c_str(), std::ios::in);
+    ifile.open((homePathStr + "/" GPARK_PATH_IGNORE).c_str(), std::ios::in);
     
     if (ifile.is_open())
     {
@@ -178,8 +168,7 @@ void GFileMgr::LoadIgnoreFile(std::string homePath_)
                     {
                         tempStr.erase(tempStr.end() - 1);
                     }
-                    tempStr = homePath_ + "/" + tempStr;
-                    _ignoreUUIDSet.insert(GetUUID(tempStr));
+                    _ignoreGlobalFullPathSet.insert(GetGlobalFullPath(globalHomePath_, tempStr.c_str()));
                 }
             }
         }
@@ -187,11 +176,12 @@ void GFileMgr::LoadIgnoreFile(std::string homePath_)
     }
 }
 
-void GFileMgr::LoadMissIgnoreFile(std::string homePath_)
+void GFileMgr::LoadMissIgnoreFile(const char * globalHomePath_)
 {
     std::ifstream ifile;
+    std::string homePathStr = globalHomePath_;
     
-    ifile.open((homePath_ + "/" GPARK_PATH_MISS_IGNORE).c_str(), std::ios::in);
+    ifile.open((homePathStr + "/" GPARK_PATH_MISS_IGNORE).c_str(), std::ios::in);
     
     if (ifile.is_open())
     {
@@ -204,8 +194,7 @@ void GFileMgr::LoadMissIgnoreFile(std::string homePath_)
                 {
                     tempStr.erase(tempStr.end() - 1);
                 }
-                tempStr = homePath_ + "/" + tempStr;
-                _missignoreUUIDSet.insert(GetUUID(tempStr));
+                _missignoreGlobalFullPathSet.insert(GetGlobalFullPath(globalHomePath_, tempStr.c_str()));
             }
         }
         ifile.close();
@@ -226,15 +215,15 @@ void GFileMgr::DifferentFileList(bool bMissIgnore,
     const std::vector<GFile*> & thisFileList = thisFileTree->GetFileList();
     const std::vector<GFile*> & otherFileList = otherFileTree->GetFileList();
     
-    std::set<unsigned long> expandMissignoreSet;
+    std::set<const char *> expandMissignoreSet;
     ExpandMissIgnoreSet(thisFileTree, expandMissignoreSet);
-    std::set<unsigned long>::iterator it_missignoreUUID = expandMissignoreSet.end();
+    std::set<const char *>::iterator it_missignoreGlobal = expandMissignoreSet.end();
     
     GFile * cur = nullptr;
     bool bInFolder = false;
     for (int i = 0; i < thisFileList.size(); ++i)
     {
-        cur = otherFileTree->GetFile(thisFileList[i]->FullPathUUID());
+        cur = otherFileTree->GetFile(thisFileList[i]->GlobalFullPath());
 
         if (cur)
         {
@@ -263,8 +252,8 @@ void GFileMgr::DifferentFileList(bool bMissIgnore,
                 }
                 if (bMissIgnore)
                 {
-                    it_missignoreUUID = expandMissignoreSet.find(thisFileList[i]->FullPathUUID());
-                    if (it_missignoreUUID == expandMissignoreSet.end())
+                    it_missignoreGlobal = expandMissignoreSet.find(thisFileList[i]->GlobalFullPath());
+                    if (it_missignoreGlobal == expandMissignoreSet.end())
                     {
                         missList.push_back(thisFileList[i]);
                     }
@@ -279,7 +268,7 @@ void GFileMgr::DifferentFileList(bool bMissIgnore,
     folderList.clear();
     for (int i = 0; i < otherFileList.size(); ++i)
     {
-        cur = thisFileTree->GetFile(otherFileList[i]->FullPathUUID());
+        cur = thisFileTree->GetFile(otherFileList[i]->GlobalFullPath());
         
         if (!cur && otherFileList[i]->Parent() != nullptr)
         {
@@ -326,91 +315,64 @@ void GFileMgr::Tree(GFile * root, std::string * str, bool bVerbose, int depth, s
     }
 }
 
-unsigned long GFileMgr::GetUUID(std::string fullPath_)
+const char * GFileMgr::GetGlobalFullPath(const char * parentPath_, const char * name_)
 {
-    std::map<std::string, unsigned long>::iterator it = _FullPathUUIDMap.find(fullPath_);
-    if (it == _FullPathUUIDMap.end())
-    {
-        _FullPathUUIDMap.insert(std::pair<std::string, unsigned long>(fullPath_, _UUID_Automatic++));
-        it = _FullPathUUIDMap.find(fullPath_);
-    }
+    size_t parentPathLength = strlen(parentPath_);
+    size_t nameLength = strlen(name_);
+    char * ret = new char[parentPathLength + nameLength + 2];
     
-    return it->second;
-}
-
-void GFileMgr::LoadFolderImpl(std::string path, GFile * parent, int & fileCount)
-{
-    DIR * dir = opendir(path.c_str());
+    strncpy(ret, parentPath_, parentPathLength);
+    strncpy(ret + parentPathLength, "/", 1);
+    strncpy(ret + parentPathLength + 1, name_, nameLength + 1);
     
-    if (dir)
+    auto it = _GlobalFullPathSet.find(ret);
+    if (it == _GlobalFullPathSet.end())
     {
-        std::set<std::string>::iterator it_name = _ignoreNameSet.end();
-        std::set<unsigned long>::iterator it_UUID = _ignoreUUIDSet.end();
-        struct dirent * ptr;
-        GFile * currentFile = nullptr;
-        while ((ptr = readdir(dir)) != nullptr)
-        {
-            it_name = _ignoreNameSet.find(ptr->d_name);
-            if (it_name != _ignoreNameSet.end())
-            {
-                continue;
-            }
-            
-            if (strcmp(ptr->d_name, ".") != 0 &&
-                strcmp(ptr->d_name, "..") != 0 &&
-                strcmp(ptr->d_name, GPARK_PATH_HOME) != 0)
-            {
-                std::string fileFullPath = path + "/" + ptr->d_name;
-                unsigned long fullPathUUID = GetUUID(fileFullPath);
-                
-                it_UUID = _ignoreUUIDSet.find(fullPathUUID);
-                
-                if (it_UUID != _ignoreUUIDSet.end())
-                {
-                    continue;
-                }
-                
-                fileCount++;
-                
-                currentFile = new GFile(parent, fileFullPath.c_str(), fullPathUUID, ptr);
-                parent->AppendChild(currentFile);
-                
-                if (currentFile->IsFolder())
-                {
-                    LoadFolderImpl(fileFullPath.c_str(), currentFile, fileCount);
-                }
-            }
-        }
-        
-        parent->SortChildren();
+        _GlobalFullPathSet.insert(ret);
+        return ret;
     }
     else
     {
-        std::cout << "error id: [" << errno << "] can't open: (" << path << ")" << std::endl;
+        delete [] ret;
+        return *it;
     }
-    
-    closedir(dir);
+}
+const char * GFileMgr::GetGlobalFullPath(const char * fullPath_)
+{
+    auto it = _GlobalFullPathSet.find(fullPath_);
+    if (it == _GlobalFullPathSet.end())
+    {
+        char * ret = new char[strlen(fullPath_) + 1];
+        strcpy(ret, fullPath_);
+        _GlobalFullPathSet.insert(ret);
+        
+        return ret;
+    }
+    else
+    {
+        return *it;
+    }
 }
 
-void GFileMgr::ExpandMissIgnoreSet(GFileTree * fileTree, std::set<unsigned long> & expandMissignoreSet)
+void GFileMgr::ExpandMissIgnoreSet(GFileTree * fileTree, std::set<const char *> & expandMissignoreSet_)
 {
-    expandMissignoreSet.clear();
-    for (auto x : _missignoreUUIDSet)
+    expandMissignoreSet_.clear();
+    for (auto x : _missignoreGlobalFullPathSet)
     {
         GFile * file = fileTree->GetFile(x);
         if (file)
         {
-            ExpandMissIgnoreSetImpl(file, expandMissignoreSet);
+            ExpandMissIgnoreSetImpl(file, expandMissignoreSet_);
         }
     }
 }
 
-void GFileMgr::ExpandMissIgnoreSetImpl(GFile * file_, std::set<unsigned long> & expandMissignoreSet)
+void GFileMgr::ExpandMissIgnoreSetImpl(GFile * file_, std::set<const char *> & expandMissignoreSet_)
 {
-    expandMissignoreSet.insert(file_->FullPathUUID());
+    expandMissignoreSet_.insert(file_->GlobalFullPath());
     
     for (int i = 0; i < file_->ChildrenSize(); ++i)
     {
-        ExpandMissIgnoreSetImpl(file_->Children(i), expandMissignoreSet);
+        ExpandMissIgnoreSetImpl(file_->Children(i), expandMissignoreSet_);
     }
 }

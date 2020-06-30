@@ -53,4 +53,12 @@ printf(CONSOLE_COLOR_FONT_RED "[Assert]" CONSOLE_COLOR_END "[%s/%s](%d) " format
 exit(-1);\
 };
 
+struct STRCMP_Compare
+{
+    bool operator()(const char * a, const char * b) const
+    {
+        return std::strcmp(a, b) < 0;
+    }
+};
+
 #endif /* _DEFINES_H_ */

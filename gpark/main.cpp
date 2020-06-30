@@ -13,7 +13,7 @@ int main(int argc, const char * argv[])
         {
             GPark::Instance()->InitDB();
         }
-        if (strcmp(argv[1], "status") == 0)
+        else if (strcmp(argv[1], "status") == 0)
         {
             GPark::Instance()->Status(false);
         }

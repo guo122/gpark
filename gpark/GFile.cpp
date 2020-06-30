@@ -15,10 +15,9 @@ long GFile::_id_automatic_inc = 0;
 GFile::GFile(char * data_, size_t size_, long & parent_id_)
     : _id(0)
     , _parent(nullptr)
-    , _fullPath(nullptr)
+    , _globalFullPath(nullptr)
     , _name(nullptr)
-    , _bGenShaed(false)
-    , _FullPathUUID(0)
+    , _bGenShaed(true)
 {
     size_t nameLength = size_ - SaveSize() - DB_OFFSET_LENGTH;
     char * buffer = new char[size_];
@@ -50,19 +49,14 @@ GFile::GFile(char * data_, size_t size_, long & parent_id_)
     delete [] buffer;
 }
 
-GFile::GFile(GFile * parent_, const char * fullPath_, const unsigned long & fullPathUUID_, struct dirent * dirent_, long id_)
+GFile::GFile(GFile * parent_, const char * globalFullPath_, struct dirent * dirent_, long id_)
     : _id(id_)
     , _parent(parent_)
-    , _fullPath(nullptr)
+    , _globalFullPath(const_cast<char *>(globalFullPath_))
     , _name(nullptr)
     , _bGenShaed(false)
-    , _FullPathUUID(fullPathUUID_)
 {
     memset(_sha, 0, SHA_CHAR_LENGTH);
-    size_t fullPathLength = strlen(fullPath_);
-    _fullPath = new char[fullPathLength + 1];
-    strncpy(_fullPath, fullPath_, fullPathLength);
-    _fullPath[fullPathLength] = 0;
     
     if (_id == -1)
     {
@@ -75,7 +69,7 @@ GFile::GFile(GFile * parent_, const char * fullPath_, const unsigned long & full
         strncpy(_name, dirent_->d_name, dirent_->d_namlen);
         _name[dirent_->d_namlen] = 0;
     }
-    stat(_fullPath, &_stat);
+    stat(_globalFullPath, &_stat);
 }
 
 GFile::~GFile()
@@ -83,10 +77,6 @@ GFile::~GFile()
     if (_name)
     {
         delete [] _name;
-    }
-    if (_fullPath)
-    {
-        delete [] _fullPath;
     }
 }
 
@@ -105,26 +95,22 @@ struct stat & GFile::Stat()
 }
 const char * GFile::CurrentPath()
 {
-    if (GPark::Instance()->GetWorkPath().size() >= strlen(_fullPath))
+    if (strlen(GPark::Instance()->GetGlobalWorkPath()) >= strlen(_globalFullPath))
     {
         return "./";
     }
     else
     {
-        return _fullPath + GPark::Instance()->GetWorkPath().size() + 1;
+        return _globalFullPath + strlen(GPark::Instance()->GetGlobalWorkPath()) + 1;
     }
 }
-const char * GFile::FullPath()
+const char * GFile::GlobalFullPath()
 {
-    return _fullPath;
+    return _globalFullPath;
 }
 const char * GFile::Name()
 {
     return _name;
-}
-const unsigned long & GFile::FullPathUUID()
-{
-    return _FullPathUUID;
 }
 
 unsigned char * GFile::Sha()
@@ -133,7 +119,7 @@ unsigned char * GFile::Sha()
     {
         _bGenShaed = true;
         
-        GAssert(_fullPath, "has no full path.");
+        GAssert(_globalFullPath, "has no full path.");
         
         if (_name != nullptr && !IsFolder())
         {
@@ -143,7 +129,7 @@ unsigned char * GFile::Sha()
             
             SHA_CTX ctx;
             std::ifstream ifile;
-            ifile.open(_fullPath, std::ios::in | std::ios::binary);
+            ifile.open(_globalFullPath, std::ios::in | std::ios::binary);
             char * buffer = new char[_stat.st_size];
             ifile.read(buffer, _stat.st_size);
             
@@ -185,19 +171,7 @@ void GFile::CopyFrom(GFile * file_)
 
 void GFile::GenFullPath()
 {
-    if (_fullPath)
-    {
-        delete [] _fullPath;
-    }
-    size_t parentfullPathLength = strlen(_parent->FullPath());
-    size_t nameLength = strlen(_name);
-    _fullPath = new char[parentfullPathLength + nameLength + 2];
-    strncpy(_fullPath, _parent->FullPath(), parentfullPathLength);
-    strncpy(_fullPath + parentfullPathLength, "/", 1);
-    strncpy(_fullPath + parentfullPathLength + 1, _name, nameLength);
-    _fullPath[parentfullPathLength + nameLength + 1] = 0;
-    
-    _FullPathUUID = GFileMgr::GetUUID(_fullPath);
+    _globalFullPath = const_cast<char *>(GFileMgr::GetGlobalFullPath(_parent->GlobalFullPath(), _name));
 }
 
 void GFile::AppendChild(GFile * child_)
@@ -218,7 +192,7 @@ void GFile::RemoveChild(GFile * child_, bool bRemoveAllChildren)
 
 bool GFile::IsSamePath(GFile * file_)
 {
-    return _FullPathUUID == file_->FullPathUUID();
+    return _globalFullPath == file_->GlobalFullPath();
 }
 
 bool GFile::IsDifferent(GFile * file_)
@@ -247,8 +221,8 @@ bool GFile::IsChild(GFile * file_)
     bool ret = false;
     
     
-    if (strlen(file_->FullPath()) > strlen(_fullPath) &&
-        strncmp(_fullPath, file_->FullPath(), strlen(_fullPath)) == 0)
+    if (strlen(file_->GlobalFullPath()) > strlen(_globalFullPath) &&
+        strncmp(_globalFullPath, file_->GlobalFullPath(), strlen(_globalFullPath)) == 0)
     {
         ret = true;
     }

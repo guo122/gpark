@@ -16,7 +16,7 @@ class GFile
     friend GFileTree;
 public:
     GFile(char * data_, size_t size_, long & parent_id_);
-    GFile(GFile * parent_, const char * fullPath_ = "", const unsigned long & fullPathUUID_ = 0, struct dirent * dirent_ = nullptr, long id_ = -1);
+    GFile(GFile * parent_, const char * globalFullPath_, struct dirent * dirent_, long id_ = -1);
     ~GFile();
     
 public:
@@ -24,9 +24,8 @@ public:
     GFile * Parent();
     struct stat & Stat();
     const char * CurrentPath();
-    const char * FullPath();
+    const char * GlobalFullPath();
     const char * Name();
-    const unsigned long & FullPathUUID();
     unsigned char * Sha();
     size_t ChildrenSize();
     GFile* Children(int index_);
@@ -58,10 +57,9 @@ private:
     
     struct stat     _stat;
     
-    char *          _fullPath;
+    char *          _globalFullPath;
     char *          _name;
     bool            _bGenShaed;
-    unsigned long   _FullPathUUID;
     unsigned char   _sha[SHA_CHAR_LENGTH];
     
 private:

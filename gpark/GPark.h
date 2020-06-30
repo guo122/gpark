@@ -23,8 +23,8 @@ public:
     void Destory();
     
 public:
-    std::string GetWorkPath();
-    std::string GetHomePath();
+    const char * GetGlobalWorkPath();
+    const char * GetGlobalHomePath();
     
 private:
     void DiffRepos(bool bMissignore, GFileTree * thisRepos, GFileTree * otherRepos);
@@ -33,8 +33,8 @@ private:
     void SaveDB();
     
 private:
-    std::string _WorkPath;
-    std::string _HomePath;
+    const char * _GlobalWorkPath;
+    const char * _GlobalHomePath;
     
     GFileTree * _savedFileTree;
     
