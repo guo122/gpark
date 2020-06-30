@@ -23,7 +23,7 @@ public:
     
 public:
     size_t CheckSize();
-    void ToBin(char * data_);
+    void ToBin(char * data_, char * totalSha_);
     
 public:
     void Refresh(bool bRefreshID);

@@ -47,6 +47,8 @@
 
 #define FULLPATH_DEFAULT_BUFFER_LENGTH      1024
 
+#define DB_VERSION_V1               1
+
 #define GAssert(expression, format, ...) \
 if (!(expression)) { \
 printf(CONSOLE_COLOR_FONT_RED "[Assert]" CONSOLE_COLOR_END "[%s/%s](%d) " format "\n", __FILE_NAME__, __FUNCTION__, __LINE__, ##__VA_ARGS__);\
@@ -60,5 +62,7 @@ struct STRCMP_Compare
         return std::strcmp(a, b) < 0;
     }
 };
+
+#include "_info.h"
 
 #endif /* _DEFINES_H_ */

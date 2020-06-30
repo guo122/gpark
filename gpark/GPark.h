@@ -28,9 +28,7 @@ public:
     
 private:
     void DiffRepos(bool bMissignore, GFileTree * thisRepos, GFileTree * otherRepos);
-    bool DetectGParkPath();
-    GFileTree * LoadDB(const char * DBPath_);
-    void SaveDB();
+    void DetectGParkPath();
     
 private:
     const char * _GlobalWorkPath;

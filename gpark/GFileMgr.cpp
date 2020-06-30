@@ -33,7 +33,7 @@ GFileTree * GFileMgr::LoadFromPath(const char * globalPath_)
     GFile * root = new GFile(nullptr, globalPath_, nullptr);
     int fileCount = 0;
     
-    std::cout << "loading...folder ";
+    std::cout << "loading...folder (" CONSOLE_COLOR_FONT_CYAN << globalPath_ << CONSOLE_COLOR_END ")" << std::endl;
     std::vector<GFile *> cacheFileList;
     cacheFileList.push_back(root);
     
@@ -98,46 +98,6 @@ GFileTree * GFileMgr::LoadFromPath(const char * globalPath_)
     }
     
     std::cout << "(" CONSOLE_COLOR_FONT_CYAN << fileCount << CONSOLE_COLOR_END " files)" << std::endl;
-    
-    return new GFileTree(root);
-}
-
-GFileTree * GFileMgr::LoadFromDB(char * data_, size_t size_)
-{
-    GFile * root = nullptr;
-    GFile * parent = nullptr;
-    GFile * cur = nullptr;
-    long parent_id = -122;
-    
-    std::map<long, GFile*> gfileMap;
-    std::map<long, GFile*>::iterator it;
-    
-    size_t offset = 0, size = 0;
-    while (offset < size_)
-    {
-        size = *((size_t*)(data_ + offset)) + DB_OFFSET_LENGTH;
-
-        cur = new GFile(data_ + offset, size, parent_id);
-        if (root == nullptr)
-        {
-            root = new GFile(nullptr, GPark::Instance()->GetGlobalHomePath(), nullptr, parent_id);
-            gfileMap.insert(std::pair<long, GFile*>(parent_id, root));
-        }
-        
-        parent = gfileMap[parent_id];
-        
-        GAssert(parent, "can't find parent id when load DB.");
-
-        parent->AppendChild(cur);
-        cur->GenFullPath();
-        
-        it = gfileMap.find(cur->Id());
-        GAssert(it == gfileMap.end(), "same id %ld (%s)", cur->Id(), cur->GlobalFullPath());
-        
-        gfileMap.insert(std::pair<long, GFile*>(cur->Id(), cur));
-        
-        offset += size;
-    }
     
     return new GFileTree(root);
 }

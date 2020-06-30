@@ -2,9 +2,9 @@ cmake_minimum_required (VERSION 3.0.2)
 
 project(gpark)
 
-set(VERSION_MAJOR 0)
-set(VERSION_MINOR 1)
-set(VERSION_PATCH 1)
+set(VERSION_MAJOR 1)
+set(VERSION_MINOR 0)
+set(VERSION_PATCH 0)
 
 set(CMAKE_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}")
 set(CMAKE_THIRDLIB_ROOTDIR ${CMAKE_ROOT_DIR}/3rdlib)

@@ -26,7 +26,7 @@ public:
     const char * CurrentPath();
     const char * GlobalFullPath();
     const char * Name();
-    unsigned char * Sha();
+    unsigned char * Sha(char * exportLog = nullptr);
     size_t ChildrenSize();
     GFile* Children(int index_);
     
@@ -42,7 +42,7 @@ public:
     bool IsFolder();
     void SortChildren();
     std::string ToString(bool bVerbose);
-    size_t ToBin(char * data_, size_t offset_);
+    size_t ToBin(char * data_, size_t offset_, char * exportLog);
     
     size_t SaveSize();
     

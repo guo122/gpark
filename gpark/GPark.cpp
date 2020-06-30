@@ -9,6 +9,7 @@
 
 #include "GPark.h"
 
+#include "GDBMgr.h"
 #include "GTools.h"
 #include "GFileMgr.h"
 #include "GFile.h"
@@ -44,11 +45,9 @@ void GPark::InitDB()
 
         ofile.close();
         
-        _GlobalHomePath = _GlobalWorkPath;
-        
         _savedFileTree = GFileMgr::LoadFromPath(_GlobalHomePath);
 
-        SaveDB();
+        GDBMgr::SaveDB(_GlobalHomePath, _savedFileTree);
         
         std::cout << "init db done. " << std::endl;
     }
@@ -69,6 +68,8 @@ void GPark::DiffRepos(bool bMissignore, GFileTree * thisRepos, GFileTree * other
     std::vector<GFile *> changesList, missList, addList;
     
     GFileMgr::DifferentFileList(bMissignore, thisRepos, otherRepos, changesList, missList, addList);
+    
+    std::cout << std::endl;
     
     for (int i = 0; i < changesList.size(); ++i)
     {
@@ -100,11 +101,11 @@ void GPark::DiffRepos(bool bMissignore, GFileTree * thisRepos, GFileTree * other
     }
 }
 
-bool GPark::DetectGParkPath()
+void GPark::DetectGParkPath()
 {
-    bool ret = true;
-    
     std::string currentStr = _GlobalWorkPath;
+    
+    bool bHasHomePath = true;
     
     while (access((currentStr + "/" GPARK_PATH_DB).c_str(), F_OK) == -1)
     {
@@ -112,20 +113,19 @@ bool GPark::DetectGParkPath()
         currentStr.erase(currentStr.begin() + last_index, currentStr.end());
         if (currentStr.empty())
         {
-            ret = false;
+            bHasHomePath = false;
             break;
         }
     }
-     
-    _GlobalHomePath = GFileMgr::GetGlobalFullPath(currentStr.c_str());
-    
-    return ret;
+    if (bHasHomePath)
+    {
+        _GlobalHomePath = GFileMgr::GetGlobalFullPath(currentStr.c_str());
+    }
 }
 
 void GPark::Status(bool bMissignore)
 {
-    std::string homePathStr = _GlobalHomePath;
-    _savedFileTree = LoadDB((homePathStr + "/" GPARK_PATH_DB).c_str());
+    _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath);
     if (_savedFileTree)
     {
         GFileTree * nowFileTree = GFileMgr::LoadFromPath(_GlobalWorkPath);
@@ -151,8 +151,7 @@ void GPark::Tree(int depth)
 
 void GPark::Show(bool bVerbose, int depth)
 {
-    std::string homePathStr = _GlobalHomePath;
-    _savedFileTree = LoadDB((homePathStr + "/" GPARK_PATH_DB).c_str());
+    _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath);
     if (_savedFileTree)
     {
         std::string treeStr;
@@ -169,8 +168,7 @@ void GPark::Show(bool bVerbose, int depth)
 
 void GPark::Save()
 {
-    std::string homePathStr = _GlobalHomePath;
-    _savedFileTree = LoadDB((homePathStr + "/" GPARK_PATH_DB).c_str());
+    _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath);
     if (_savedFileTree)
     {
         std::vector<GFile *> changesList, missList, addList;
@@ -208,7 +206,7 @@ void GPark::Save()
             _savedFileTree->Refresh(false);
         }
         
-        SaveDB();
+        GDBMgr::SaveDB(_GlobalHomePath, _savedFileTree);
     }
     else
     {
@@ -218,14 +216,10 @@ void GPark::Save()
 
 void GPark::Diff(const char * otherRepos_)
 {
-    std::string homePathStr = _GlobalHomePath;
-    _savedFileTree = LoadDB((homePathStr + "/" GPARK_PATH_DB).c_str());
+    _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath);
     if (_savedFileTree)
      {
-         std::string otherReposStr = otherRepos_;
-         otherReposStr += "/" GPARK_PATH_DB;
-         
-         GFileTree * otherFileTree = LoadDB(otherReposStr.c_str());
+         GFileTree * otherFileTree = GDBMgr::LoadDB(otherRepos_);
          
          if (otherFileTree == nullptr)
          {
@@ -247,64 +241,6 @@ void GPark::Destory()
     // todo(gzy): delete GFile *
 }
 
-GFileTree * GPark::LoadDB(const char * DBPath_)
-{
-    GFileTree * ret = nullptr;
-    
-    std::ifstream ifile;
-    
-    ifile.open(DBPath_, std::ios::in | std::ios::binary);
-    
-    if (ifile.is_open())
-    {
-        struct stat dbStat;
-        stat(DBPath_, &dbStat);
-        
-        if (dbStat.st_size >= DB_OFFSET_LENGTH)
-        {
-            unsigned char dbSha[SHA_CHAR_LENGTH];
-            
-            char * readBuffer = new char[dbStat.st_size];
-            ifile.read(readBuffer, dbStat.st_size);
-            
-            SHA_CTX ctx;
-            SHA1_Init(&ctx);
-            SHA1_Update(&ctx, readBuffer, dbStat.st_size);
-            SHA1_Final(dbSha, &ctx);
-            std::cout << "loading...DB(" CONSOLE_COLOR_FONT_CYAN << GTools::FormatShaToHex(dbSha) << CONSOLE_COLOR_END ")" CONSOLE_COLOR_FONT_YELLOW << GTools::FormatTimestampToYYMMDD_HHMMSS(dbStat.st_mtimespec.tv_sec) << CONSOLE_COLOR_END << std::endl;
-            
-            ret = GFileMgr::LoadFromDB(readBuffer + DB_OFFSET_LENGTH, dbStat.st_size - DB_OFFSET_LENGTH);
-            
-            delete [] readBuffer;
-        }
-        
-        ifile.close();
-    }
-    
-    return ret;
-}
-
-void GPark::SaveDB()
-{
-    std::ofstream ofile;
-    std::string homePathStr = _GlobalHomePath;
-
-    _savedFileTree->Refresh(true);
-    size_t size = _savedFileTree->CheckSize() + DB_OFFSET_LENGTH;
-
-    char * writeBuffer = new char[size];
-    
-    memcpy(writeBuffer, (char *)&size, DB_OFFSET_LENGTH);
-    
-    _savedFileTree->ToBin(writeBuffer + DB_OFFSET_LENGTH);
-    
-    ofile.open((homePathStr + "/" GPARK_PATH_DB).c_str(), std::ios::out | std::ios::binary);
-    ofile.write(writeBuffer, size);
-    ofile.close();
-    
-    delete [] writeBuffer;
-}
-
 GPark::GPark()
     : _GlobalWorkPath(nullptr)
     , _GlobalHomePath(nullptr)
@@ -314,12 +250,11 @@ GPark::GPark()
     getcwd(workPathBuffer, FULLPATH_DEFAULT_BUFFER_LENGTH);
     
     _GlobalWorkPath = GFileMgr::GetGlobalFullPath(workPathBuffer);
+    _GlobalHomePath = _GlobalWorkPath;
 
-    if (DetectGParkPath())
-    {
-        GFileMgr::LoadIgnoreFile(_GlobalHomePath);
-        GFileMgr::LoadMissIgnoreFile(_GlobalHomePath);
-    }
+    DetectGParkPath();
+    GFileMgr::LoadIgnoreFile(_GlobalHomePath);
+    GFileMgr::LoadMissIgnoreFile(_GlobalHomePath);
 }
 
 GPark::~GPark()

@@ -2,6 +2,30 @@
 
 #include "GTools.h"
 
+void GTools::FormatFileSize(long long size_, char * str, const char * color_)
+{
+    if (size_ < STORAGE_KB)
+    {
+        sprintf(str, "%s%lld bytes" CONSOLE_COLOR_END, color_, size_);
+    }
+    else if (size_ < STORAGE_MB)
+    {
+        sprintf(str, "%s%.2f KB" CONSOLE_COLOR_END, color_, (double)size_ / (double)STORAGE_KB);
+    }
+    else if (size_ < STORAGE_GB)
+    {
+        sprintf(str, "%s%.2f MB" CONSOLE_COLOR_END, color_, (double)size_ / (double)STORAGE_MB);
+    }
+    else if (size_ < STORAGE_TB)
+    {
+        sprintf(str, "%s%.2f GB" CONSOLE_COLOR_END, color_, (double)size_ / (double)STORAGE_GB);
+    }
+    else
+    {
+        sprintf(str, "%s%.2f TB" CONSOLE_COLOR_END, color_, (double)size_ / (double)STORAGE_TB);
+    }
+}
+
 void GTools::FormatFileSize(long long size_, char * str)
 {
     if (size_ < STORAGE_KB)

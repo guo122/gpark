@@ -62,13 +62,18 @@ size_t GFileTree::CheckSize()
     return ret;
 }
 
-void GFileTree::ToBin(char * data_)
+void GFileTree::ToBin(char * data_, char * totalSha_)
 {
     size_t offset = 0;
-    for (int i = 1; i < _fileList.size(); ++i)
+    char exportLog[1024];
+    auto fileListSize = _fileList.size();
+    for (int i = 1; i < fileListSize; ++i)
     {
-        offset += _fileList[i]->ToBin(data_, offset);
+        std::cout << "\rto bin (" CONSOLE_COLOR_FONT_CYAN << i << "/" << fileListSize - 1 << CONSOLE_COLOR_END ") ";
+        offset += _fileList[i]->ToBin(data_, offset, exportLog);
+        memcpy(totalSha_ + ((i - 1) * SHA_CHAR_LENGTH), _fileList[i]->Sha(), SHA_CHAR_LENGTH);
     }
+    std::cout << "done" << std::endl;
 }
 
 void GFileTree::Refresh(bool bRefreshID)

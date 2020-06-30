@@ -14,7 +14,6 @@ class GFileMgr
 {
 public:
     static GFileTree * LoadFromPath(const char * globalPath_);
-    static GFileTree * LoadFromDB(char * data_, size_t size_);
     static void LoadIgnoreFile(const char * globalHomePath_);
     static void LoadMissIgnoreFile(const char * globalHomePath_);
     static void DifferentFileList(bool bMissIgnore,

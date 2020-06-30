@@ -113,7 +113,7 @@ const char * GFile::Name()
     return _name;
 }
 
-unsigned char * GFile::Sha()
+unsigned char * GFile::Sha(char * exportLog)
 {
     if (!_bGenShaed)
     {
@@ -123,9 +123,15 @@ unsigned char * GFile::Sha()
         
         if (_name != nullptr && !IsFolder())
         {
-            char sizeBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
-            GTools::FormatFileSize(_stat.st_size, sizeBuf);
-            std::cout << "calculate sha (" << sizeBuf << ") " << _name << ".  " << std::flush;
+            if (exportLog)
+            {
+                strncpy(exportLog, "cal sha: (", 10);
+                GTools::FormatFileSize(_stat.st_size, exportLog + 10, CONSOLE_COLOR_FONT_CYAN);
+                strncpy(exportLog + strlen(exportLog), ") ", 3);
+//                strncpy(exportLog + strlen(exportLog), _name, strlen(_name) + 1);
+                
+                std::cout << exportLog << std::flush;
+            }
             
             SHA_CTX ctx;
             std::ifstream ifile;
@@ -139,8 +145,6 @@ unsigned char * GFile::Sha()
             
             ifile.close();
             delete[] buffer;
-            
-            std::cout << "\rdone" << std::flush;
         }
     }
     return _sha;
@@ -271,7 +275,7 @@ std::string GFile::ToString(bool bVerbose)
     return tempChar;
 }
 
-size_t GFile::ToBin(char * data_, size_t offset_)
+size_t GFile::ToBin(char * data_, size_t offset_, char * exportLog)
 {
     size_t ret = SaveSize();
     char * cur = data_ + offset_;
@@ -297,7 +301,7 @@ size_t GFile::ToBin(char * data_, size_t offset_)
     cur += strlen(_name) + 1;
     
     // sha
-    memcpy(cur, Sha(), SHA_CHAR_LENGTH);
+    memcpy(cur, Sha(exportLog), SHA_CHAR_LENGTH);
     
     return ret + DB_OFFSET_LENGTH;
 }

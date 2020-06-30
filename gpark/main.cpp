@@ -61,7 +61,7 @@ int main(int argc, const char * argv[])
         else
         {
             // todo(gzy): opt arguments.
-            std::cout << "gpark usage:" << std::endl;
+            std::cout << "gpark " MAIN_VERSION " usage:" << std::endl;
             std::cout << "\tgpark init" << std::endl;
             std::cout << "\tgpark status" << std::endl;
             std::cout << "\tgpark tree [depth]" << std::endl;
@@ -71,10 +71,8 @@ int main(int argc, const char * argv[])
             std::cout << "\tgpark diff <other repos>" << std::endl;
         }
     }
-    
-    std::cout << std::endl;
-    
+
     GPark::Instance()->Destory();
-    
+
     return 0;
 }
