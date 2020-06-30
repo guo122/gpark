@@ -45,13 +45,14 @@ GFileTree * GFileMgr::LoadFromPath(const char * path_)
     struct dirent * ptr;
     GFile * parent = nullptr;
     GFile * cur = nullptr;
-    std::string fileFullPatn;
+    char fileFullPath[FULLPATH_DEFAULT_BUFFER_LENGTH];
+    size_t parentFullPathLength = 0;
     
     std::string::size_type cacheIndex = 0;
     while (cacheIndex < cacheFileList.size())
     {
         parent = cacheFileList[cacheIndex];
-        dir = opendir(parent->FullPath().c_str());
+        dir = opendir(parent->FullPath());
         
         if (dir)
         {
@@ -67,8 +68,14 @@ GFileTree * GFileMgr::LoadFromPath(const char * path_)
                     strcmp(ptr->d_name, "..") != 0 &&
                     strcmp(ptr->d_name, GPARK_PATH_HOME) != 0)
                 {
-                    fileFullPatn = parent->FullPath() + "/" + ptr->d_name;
-                    unsigned long fullPathUUID = GetUUID(fileFullPatn);
+                    parentFullPathLength = strlen(parent->FullPath());
+                    strncpy(fileFullPath, parent->FullPath(), parentFullPathLength);
+                    strncpy(fileFullPath + parentFullPathLength, "/", 1);
+                    strncpy(fileFullPath + parentFullPathLength + 1, ptr->d_name, ptr->d_namlen);
+                    fileFullPath[parentFullPathLength + 1 + ptr->d_namlen] = 0;
+                    GAssert(parentFullPathLength + 1 + ptr->d_namlen < FULLPATH_DEFAULT_BUFFER_LENGTH, "full path length(%ld) out buffer length(%d). path: %s, name: %s", parentFullPathLength + 1 + ptr->d_namlen, FULLPATH_DEFAULT_BUFFER_LENGTH, parent->FullPath(), ptr->d_name);
+                    
+                    unsigned long fullPathUUID = GetUUID(fileFullPath);
                     
                     it_UUID = _ignoreUUIDSet.find(fullPathUUID);
                     
@@ -79,7 +86,7 @@ GFileTree * GFileMgr::LoadFromPath(const char * path_)
                     
                     fileCount++;
                     
-                    cur = new GFile(parent, fileFullPatn.c_str(), fullPathUUID, ptr);
+                    cur = new GFile(parent, fileFullPath, fullPathUUID, ptr);
                     parent->AppendChild(cur);
                     
                     if (cur->IsFolder())
@@ -136,7 +143,7 @@ GFileTree * GFileMgr::LoadFromDB(char * data_, size_t size_)
         cur->GenFullPath();
         
         it = gfileMap.find(cur->Id());
-        GAssert(it == gfileMap.end(), "same id %ld (%s)", cur->Id(), cur->FullPath().c_str());
+        GAssert(it == gfileMap.end(), "same id %ld (%s)", cur->Id(), cur->FullPath());
         
         gfileMap.insert(std::pair<long, GFile*>(cur->Id(), cur));
         
@@ -353,8 +360,8 @@ void GFileMgr::LoadFolderImpl(std::string path, GFile * parent, int & fileCount)
                 strcmp(ptr->d_name, "..") != 0 &&
                 strcmp(ptr->d_name, GPARK_PATH_HOME) != 0)
             {
-                std::string fileFullPatn = path + "/" + ptr->d_name;
-                unsigned long fullPathUUID = GetUUID(fileFullPatn);
+                std::string fileFullPath = path + "/" + ptr->d_name;
+                unsigned long fullPathUUID = GetUUID(fileFullPath);
                 
                 it_UUID = _ignoreUUIDSet.find(fullPathUUID);
                 
@@ -365,12 +372,12 @@ void GFileMgr::LoadFolderImpl(std::string path, GFile * parent, int & fileCount)
                 
                 fileCount++;
                 
-                currentFile = new GFile(parent, fileFullPatn.c_str(), fullPathUUID, ptr);
+                currentFile = new GFile(parent, fileFullPath.c_str(), fullPathUUID, ptr);
                 parent->AppendChild(currentFile);
                 
                 if (currentFile->IsFolder())
                 {
-                    LoadFolderImpl(fileFullPatn.c_str(), currentFile, fileCount);
+                    LoadFolderImpl(fileFullPath.c_str(), currentFile, fileCount);
                 }
             }
         }

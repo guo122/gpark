@@ -34,16 +34,18 @@
 #define GPARK_PATH_IGNORE               GPARK_PATH_HOME "/ignore"
 #define GPARK_PATH_MISS_IGNORE          GPARK_PATH_HOME "/missignore"
 
-#define FORMAT_FILESIZE_BUFFER_LENGTH   50
-
 #define STORAGE_KB          1024
 #define STORAGE_MB          1048576
 #define STORAGE_GB          1073741824
 #define STORAGE_TB          1099511627776
 
+#define FORMAT_FILESIZE_BUFFER_LENGTH   50
+
 #define DB_OFFSET_LENGTH    8
 
 #define SHA_CHAR_LENGTH     20
+
+#define FULLPATH_DEFAULT_BUFFER_LENGTH      1024
 
 #define GAssert(expression, format, ...) \
 if (!(expression)) { \

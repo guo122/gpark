@@ -15,11 +15,12 @@ long GFile::_id_automatic_inc = 0;
 GFile::GFile(char * data_, size_t size_, long & parent_id_)
     : _id(0)
     , _parent(nullptr)
-    , _name("")
+    , _fullPath(nullptr)
+    , _name(nullptr)
     , _bGenShaed(false)
     , _FullPathUUID(0)
 {
-    size_t nameSize = size_ - SaveSize() - DB_OFFSET_LENGTH;
+    size_t nameLength = size_ - SaveSize() - DB_OFFSET_LENGTH;
     char * buffer = new char[size_];
     
     data_ += DB_OFFSET_LENGTH;
@@ -36,13 +37,15 @@ GFile::GFile(char * data_, size_t size_, long & parent_id_)
     data_ += sizeof(struct stat);
     _stat = *((struct stat*)buffer);
     
-    memcpy(buffer, data_, nameSize + 1);
-    data_ += nameSize + 1;
-    _name = buffer;
+    memcpy(buffer, data_, nameLength + 1);
+    data_ += nameLength + 1;
+    _name = new char[nameLength + 1];
+    strncpy(_name, buffer, nameLength);
+    _name[nameLength] = 0;
     
     memcpy(buffer, data_, SHA_CHAR_LENGTH);
     data_ += SHA_CHAR_LENGTH;
-    memcpy(Sha(), buffer, SHA_CHAR_LENGTH);
+    memcpy(_sha, buffer, SHA_CHAR_LENGTH);
     
     delete [] buffer;
 }
@@ -50,12 +53,16 @@ GFile::GFile(char * data_, size_t size_, long & parent_id_)
 GFile::GFile(GFile * parent_, const char * fullPath_, const unsigned long & fullPathUUID_, struct dirent * dirent_, long id_)
     : _id(id_)
     , _parent(parent_)
-    , _name("")
+    , _fullPath(nullptr)
+    , _name(nullptr)
     , _bGenShaed(false)
     , _FullPathUUID(fullPathUUID_)
 {
     memset(_sha, 0, SHA_CHAR_LENGTH);
-    _fullPath = fullPath_;
+    size_t fullPathLength = strlen(fullPath_);
+    _fullPath = new char[fullPathLength + 1];
+    strncpy(_fullPath, fullPath_, fullPathLength);
+    _fullPath[fullPathLength] = 0;
     
     if (_id == -1)
     {
@@ -64,14 +71,23 @@ GFile::GFile(GFile * parent_, const char * fullPath_, const unsigned long & full
     
     if (dirent_)
     {
-        _name = dirent_->d_name;
+        _name = new char[dirent_->d_namlen + 1];
+        strncpy(_name, dirent_->d_name, dirent_->d_namlen);
+        _name[dirent_->d_namlen] = 0;
     }
-    stat(_fullPath.c_str(), &_stat);
+    stat(_fullPath, &_stat);
 }
 
 GFile::~GFile()
 {
-    
+    if (_name)
+    {
+        delete [] _name;
+    }
+    if (_fullPath)
+    {
+        delete [] _fullPath;
+    }
 }
 
 long GFile::Id()
@@ -89,34 +105,37 @@ struct stat & GFile::Stat()
 }
 const char * GFile::CurrentPath()
 {
-    if (GPark::Instance()->GetWorkPath().size() >= _fullPath.size())
+    if (GPark::Instance()->GetWorkPath().size() >= strlen(_fullPath))
     {
         return "./";
     }
     else
     {
-        return _fullPath.c_str() + GPark::Instance()->GetWorkPath().size() + 1;
+        return _fullPath + GPark::Instance()->GetWorkPath().size() + 1;
     }
 }
-const std::string & GFile::FullPath()
+const char * GFile::FullPath()
 {
     return _fullPath;
+}
+const char * GFile::Name()
+{
+    return _name;
 }
 const unsigned long & GFile::FullPathUUID()
 {
     return _FullPathUUID;
 }
-const std::string & GFile::Name()
-{
-    return _name;
-}
+
 unsigned char * GFile::Sha()
 {
     if (!_bGenShaed)
     {
         _bGenShaed = true;
         
-        if (!Name().empty() && !_fullPath.empty() && !IsFolder())
+        GAssert(_fullPath, "has no full path.");
+        
+        if (_name != nullptr && !IsFolder())
         {
             char sizeBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
             GTools::FormatFileSize(_stat.st_size, sizeBuf);
@@ -124,7 +143,7 @@ unsigned char * GFile::Sha()
             
             SHA_CTX ctx;
             std::ifstream ifile;
-            ifile.open(_fullPath.c_str(), std::ios::in | std::ios::binary);
+            ifile.open(_fullPath, std::ios::in | std::ios::binary);
             char * buffer = new char[_stat.st_size];
             ifile.read(buffer, _stat.st_size);
             
@@ -159,10 +178,6 @@ void GFile::SetParent(GFile * parent_)
 
 void GFile::CopyFrom(GFile * file_)
 {
-//    _parent = file_->Parent();
-//    strcpy(_fullPath, file_->FullPath());
-//    _FullPathUUID = file_->FullPathUUID();
-//    _name = file_->Name();
     _bGenShaed = file_->_bGenShaed;
     memcpy(_sha, file_->Sha(), SHA_CHAR_LENGTH);
     _stat = file_->Stat();
@@ -170,7 +185,18 @@ void GFile::CopyFrom(GFile * file_)
 
 void GFile::GenFullPath()
 {
-    _fullPath = _parent->FullPath() + "/" + _name;
+    if (_fullPath)
+    {
+        delete [] _fullPath;
+    }
+    size_t parentfullPathLength = strlen(_parent->FullPath());
+    size_t nameLength = strlen(_name);
+    _fullPath = new char[parentfullPathLength + nameLength + 2];
+    strncpy(_fullPath, _parent->FullPath(), parentfullPathLength);
+    strncpy(_fullPath + parentfullPathLength, "/", 1);
+    strncpy(_fullPath + parentfullPathLength + 1, _name, nameLength);
+    _fullPath[parentfullPathLength + nameLength + 1] = 0;
+    
     _FullPathUUID = GFileMgr::GetUUID(_fullPath);
 }
 
@@ -221,8 +247,8 @@ bool GFile::IsChild(GFile * file_)
     bool ret = false;
     
     
-    if (file_->FullPath().size() > _fullPath.size() &&
-        strncmp(_fullPath.c_str(), file_->FullPath().c_str(), _fullPath.size()) == 0)
+    if (strlen(file_->FullPath()) > strlen(_fullPath) &&
+        strncmp(_fullPath, file_->FullPath(), strlen(_fullPath)) == 0)
     {
         ret = true;
     }
@@ -251,7 +277,7 @@ std::string GFile::ToString(bool bVerbose)
     char tempChar[300];
     if (IsFolder())
     {
-        sprintf(tempChar, CONSOLE_COLOR_FOLDER "%s/" CONSOLE_COLOR_END, _name.c_str());
+        sprintf(tempChar, CONSOLE_COLOR_FOLDER "%s/" CONSOLE_COLOR_END, _name);
     }
     else
     {
@@ -260,11 +286,11 @@ std::string GFile::ToString(bool bVerbose)
         
         if (bVerbose)
         {
-            sprintf(tempChar, "%s (%s), %s", _name.c_str(), sizeBuf, GTools::FormatShaToHex(_sha).c_str());
+            sprintf(tempChar, "%s (%s), %s", _name, sizeBuf, GTools::FormatShaToHex(Sha()).c_str());
         }
         else
         {
-            sprintf(tempChar, "%s (%s)", _name.c_str(), sizeBuf);
+            sprintf(tempChar, "%s (%s)", _name, sizeBuf);
         }
     }
     
@@ -293,8 +319,8 @@ size_t GFile::ToBin(char * data_, size_t offset_)
     cur += sizeof(struct stat);
     
     // name
-    memcpy(cur, _name.c_str(), _name.size() + 1);
-    cur += _name.size() + 1;
+    memcpy(cur, _name, strlen(_name) + 1);
+    cur += strlen(_name) + 1;
     
     // sha
     memcpy(cur, Sha(), SHA_CHAR_LENGTH);
@@ -304,8 +330,13 @@ size_t GFile::ToBin(char * data_, size_t offset_)
 
 size_t GFile::SaveSize()
 {
+    size_t nameLength = 0;
+    if (_name != nullptr)
+    {
+        nameLength = strlen(_name);
+    }
     // id, parent_id, stat, name, sha;
-    size_t ret = sizeof(long) + sizeof(long) + sizeof(struct stat) + _name.size() + 1 + SHA_CHAR_LENGTH;
+    size_t ret = sizeof(long) + sizeof(long) + sizeof(struct stat) + nameLength + 1 + SHA_CHAR_LENGTH;
     
     return ret;
 }

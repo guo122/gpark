@@ -24,9 +24,9 @@ public:
     GFile * Parent();
     struct stat & Stat();
     const char * CurrentPath();
-    const std::string & FullPath();
+    const char * FullPath();
+    const char * Name();
     const unsigned long & FullPathUUID();
-    const std::string & Name();
     unsigned char * Sha();
     size_t ChildrenSize();
     GFile* Children(int index_);
@@ -58,8 +58,8 @@ private:
     
     struct stat     _stat;
     
-    std::string     _fullPath;
-    std::string     _name;
+    char *          _fullPath;
+    char *          _name;
     bool            _bGenShaed;
     unsigned long   _FullPathUUID;
     unsigned char   _sha[SHA_CHAR_LENGTH];
