@@ -203,10 +203,10 @@ void GPark::Save()
             GAssert(cur != nullptr, "save error. can't find %s", addList[i]->Parent()->GlobalFullPath());
             
             cur->AppendChild(addList[i]);
+            cur->SortChildren();
+            
             _savedFileTree->Refresh(false);
         }
-        
-        cur->SortChildren();
         
         SaveDB();
     }
@@ -312,6 +312,7 @@ GPark::GPark()
 {
     char workPathBuffer[FULLPATH_DEFAULT_BUFFER_LENGTH];
     getcwd(workPathBuffer, FULLPATH_DEFAULT_BUFFER_LENGTH);
+    
     _GlobalWorkPath = GFileMgr::GetGlobalFullPath(workPathBuffer);
 
     if (DetectGParkPath())
