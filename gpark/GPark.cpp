@@ -5,8 +5,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <openssl/sha.h>
-
 #include "GPark.h"
 
 #include "GDBMgr.h"

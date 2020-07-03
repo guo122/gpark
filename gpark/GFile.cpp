@@ -1,7 +1,7 @@
 
 #include <fstream>
 #include <dirent.h>
-#include <openssl/sha.h>
+#include "3rd/sha1.h"
 
 #include "GTools.h"
 #include "GPark.h"
@@ -133,15 +133,15 @@ unsigned char * GFile::Sha(char * exportLog)
                 std::cout << exportLog << std::flush;
             }
             
-            SHA_CTX ctx;
+            blk_SHA_CTX ctx;
             std::ifstream ifile;
             ifile.open(_globalFullPath, std::ios::in | std::ios::binary);
             char * buffer = new char[_stat.st_size];
             ifile.read(buffer, _stat.st_size);
-            
-            SHA1_Init(&ctx);
-            SHA1_Update(&ctx, buffer, _stat.st_size);
-            SHA1_Final(_sha, &ctx);
+
+            blk_SHA1_Init(&ctx);
+            blk_SHA1_Update(&ctx, buffer, _stat.st_size);
+            blk_SHA1_Final(_sha, &ctx);
             
             ifile.close();
             delete[] buffer;

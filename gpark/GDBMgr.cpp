@@ -1,6 +1,7 @@
 
 #include <fstream>
-#include <openssl/sha.h>
+
+#include "3rd/sha1.h"
 
 #include "GTools.h"
 #include "GFileTree.h"
@@ -134,10 +135,10 @@ void GDBMgr::SaveDBV1(const char * globalHomePath_, GFileTree * fileTree_)
     fileTree_->ToBin(writeBuffer + 1 + SHA_CHAR_LENGTH, totalShaBuffer);
     
     unsigned char dbSha[SHA_CHAR_LENGTH];
-    SHA_CTX ctx;
-    SHA1_Init(&ctx);
-    SHA1_Update(&ctx, totalShaBuffer, totalShaBufferLength);
-    SHA1_Final(dbSha, &ctx);
+    blk_SHA_CTX ctx;
+    blk_SHA1_Init(&ctx);
+    blk_SHA1_Update(&ctx, totalShaBuffer, totalShaBufferLength);
+    blk_SHA1_Final(dbSha, &ctx);
     
     memcpy(writeBuffer + 1, dbSha, SHA_CHAR_LENGTH);
     
