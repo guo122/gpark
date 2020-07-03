@@ -89,8 +89,14 @@ GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, str
     
     std::cout << "loading...DB(" CONSOLE_COLOR_FONT_CYAN << GTools::FormatShaToHex(dbSha) << CONSOLE_COLOR_END ")" CONSOLE_COLOR_FONT_YELLOW << GTools::FormatTimestampToYYMMDD_HHMMSS(dbStat_.st_mtimespec.tv_sec) << CONSOLE_COLOR_END << std::endl;
     
+    char offsetFormatBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
+    char sizeFormatBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
+    GTools::FormatFileSize(dbStat_.st_size, sizeFormatBuf, CONSOLE_COLOR_FONT_CYAN);
     while (offset < dbStat_.st_size)
     {
+        GTools::FormatFileSize(offset, offsetFormatBuf, CONSOLE_COLOR_FONT_CYAN);
+        std::cout << "\r(" << offsetFormatBuf << "/" << sizeFormatBuf << ")" << std::flush;
+        
         size = *((size_t*)(dbBuffer_ + offset)) + DB_OFFSET_LENGTH;
 
         cur = new GFile(dbBuffer_ + offset, size, parent_id);
@@ -114,6 +120,7 @@ GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, str
         
         offset += size;
     }
+    std::cout << "\r(" << sizeFormatBuf << ")..done" << std::endl;
     
     return new GFileTree(root);
 }

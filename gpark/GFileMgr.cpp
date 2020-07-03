@@ -33,7 +33,7 @@ GFileTree * GFileMgr::LoadFromPath(const char * globalPath_)
     GFile * root = new GFile(nullptr, globalPath_, nullptr);
     int fileCount = 0;
     
-    std::cout << "loading...folder (" CONSOLE_COLOR_FONT_CYAN << globalPath_ << CONSOLE_COLOR_END ")" << std::endl;
+    std::cout << "loading...folder (" CONSOLE_COLOR_FONT_CYAN << globalPath_ << CONSOLE_COLOR_END ")" << std::flush;
     std::vector<GFile *> cacheFileList;
     cacheFileList.push_back(root);
     
@@ -97,7 +97,7 @@ GFileTree * GFileMgr::LoadFromPath(const char * globalPath_)
         ++cacheIndex;
     }
     
-    std::cout << "(" CONSOLE_COLOR_FONT_CYAN << fileCount << CONSOLE_COLOR_END " files)" << std::endl;
+    std::cout << "(" CONSOLE_COLOR_FONT_CYAN << fileCount << CONSOLE_COLOR_END " files)..done" << std::endl;
     
     return new GFileTree(root);
 }
