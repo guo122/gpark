@@ -6,8 +6,10 @@
 #include <dirent.h>
 #include <sys/types.h>
 
+#include "GThreadHelper.h"
 #include "GFile.h"
 #include "GPark.h"
+#include "GTools.h"
 #include "GFileTree.h"
 
 #include "GFileMgr.h"
@@ -28,76 +30,68 @@ GFileMgr::~GFileMgr()
     
 }
 
-GFileTree * GFileMgr::LoadFromPath(const char * globalPath_)
+GFileTree * GFileMgr::LoadFromPath(const char * globalPath_, unsigned int threadNum_)
 {
+    std::chrono::steady_clock::time_point time_begin = std::chrono::steady_clock::now();
+    
+    threadNum_ = GTools::GetRecommendThreadNum(threadNum_, 2);
     GFile * root = new GFile(nullptr, globalPath_, nullptr);
-    int fileCount = 0;
+    long fileCount = 0;
+    long folderCount = 1;
+    
+    bool outputRunning = true;
     
     std::cout << "loading...folder (" CONSOLE_COLOR_FONT_CYAN << globalPath_ << CONSOLE_COLOR_END ")" << std::flush;
-    std::vector<GFile *> cacheFileList;
-    cacheFileList.push_back(root);
     
-    DIR * dir = nullptr;
-    std::set<std::string>::iterator it_name = _ignoreNameSet.end();
-    std::set<const char *>::iterator it_fullpath = _ignoreGlobalFullPathSet.end();
-    struct dirent * ptr;
-    GFile * parent = nullptr;
-    GFile * cur = nullptr;
-    const char * globalFullPath = nullptr;
+    std::vector<std::vector<GFile *> *> childrenAppendLists;
+    std::vector<bool *> threadRunningList;
     
-    std::string::size_type cacheIndex = 0;
-    while (cacheIndex < cacheFileList.size())
-    {
-        parent = cacheFileList[cacheIndex];
-        dir = opendir(parent->GlobalFullPath());
-        
-        if (dir)
-        {
-            while ((ptr = readdir(dir)) != nullptr)
-            {
-                it_name = _ignoreNameSet.find(ptr->d_name);
-                if (it_name != _ignoreNameSet.end())
-                {
-                    continue;
-                }
-                
-                if (strcmp(ptr->d_name, ".") != 0 &&
-                    strcmp(ptr->d_name, "..") != 0 &&
-                    strcmp(ptr->d_name, GPARK_PATH_HOME) != 0)
-                {
-                    globalFullPath = GetGlobalFullPath(parent->GlobalFullPath(), ptr->d_name);
+    std::thread outputThread(GThreadHelper::PrintLoadFolder, threadNum_, &time_begin, &fileCount, &outputRunning);
 
-                    it_fullpath = _ignoreGlobalFullPathSet.find(globalFullPath);
-                    
-                    if (it_fullpath != _ignoreGlobalFullPathSet.end())
-                    {
-                        continue;
-                    }
-                    
-                    fileCount++;
-                    
-                    cur = new GFile(parent, globalFullPath, ptr);
-                    parent->AppendChild(cur);
-                    
-                    if (cur->IsFolder())
-                    {
-                        cacheFileList.push_back(cur);
-                    }
-                }
-            }
-            
-            parent->SortChildren();
-            closedir(dir);
-        }
-        else
+    if (threadNum_ > 1)
+    {
+        std::vector<std::thread *> splitThreads;
+        for (int i = 0; i < threadNum_; ++i)
         {
-            std::cout << "error id: [" << errno << "], can't open: (" << parent->GlobalFullPath() << ")" << std::endl;
+            std::vector<GFile *> * splitFileList = new std::vector<GFile *>();
+            childrenAppendLists.push_back(splitFileList);
+            threadRunningList.push_back(new bool);
+        }
+        childrenAppendLists[0]->push_back(root);
+        *(threadRunningList[0]) = true;
+
+        for (int i = 0; i < threadNum_; ++i)
+        {
+            splitThreads.push_back(new std::thread(GThreadHelper::OpenFolder, childrenAppendLists, i, &fileCount, &folderCount, threadRunningList));
         }
         
-        ++cacheIndex;
+        for (int i = 0; i < threadNum_; ++i)
+        {
+            splitThreads[i]->join();
+        }
+        
+        for (int i = 0; i < threadNum_; ++i)
+        {
+            delete splitThreads[i];
+            delete childrenAppendLists[i];
+            delete threadRunningList[i];
+        }
+    }
+    else
+    {
+        std::vector<GFile *> fileList;
+        bool bRunning = true;
+        fileList.push_back(root);
+        threadRunningList.push_back(&bRunning);
+        childrenAppendLists.push_back(&fileList);
+        
+        GThreadHelper::OpenFolder(childrenAppendLists, 0, &fileCount, &folderCount, threadRunningList);
     }
     
-    std::cout << "(" CONSOLE_COLOR_FONT_CYAN << fileCount << CONSOLE_COLOR_END " files).." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
+    outputRunning = false;
+    outputThread.join();
+
+    std::cout << CONSOLE_CLEAR_LINE "\r(" CONSOLE_COLOR_FONT_CYAN << fileCount << CONSOLE_COLOR_END " files).." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
     
     return new GFileTree(root);
 }
@@ -313,6 +307,25 @@ const char * GFileMgr::GetGlobalFullPath(const char * fullPath_)
     {
         return *it;
     }
+}
+
+const char * GFileMgr::GetGlobalFullPathWithIgnore(const char * parentPath_, const char * name_)
+{
+    const char * ret = nullptr;
+    auto it_name = _ignoreNameSet.find(name_);
+    if (it_name == _ignoreNameSet.end() &&
+        strcmp(name_, ".") != 0 &&
+        strcmp(name_, "..") != 0 &&
+        strcmp(name_, GPARK_PATH_HOME) != 0)
+    {
+        ret = GetGlobalFullPath(parentPath_, name_);
+        auto it_fullpath = _ignoreGlobalFullPathSet.find(ret);
+        if (it_fullpath != _ignoreGlobalFullPathSet.end())
+        {
+            ret = nullptr;
+        }
+    }
+    return ret;
 }
 
 void GFileMgr::ExpandMissIgnoreSet(GFileTree * fileTree, std::set<const char *> & expandMissignoreSet_)

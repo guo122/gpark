@@ -43,7 +43,7 @@ void GPark::InitDB(unsigned threadNum_)
 
         ofile.close();
         
-        _savedFileTree = GFileMgr::LoadFromPath(_GlobalHomePath);
+        _savedFileTree = GFileMgr::LoadFromPath(_GlobalHomePath, threadNum_);
 
         GDBMgr::SaveDB(_GlobalHomePath, _savedFileTree, threadNum_);
         
@@ -121,12 +121,12 @@ void GPark::DetectGParkPath()
     }
 }
 
-void GPark::Status(bool bMissignore)
+void GPark::Status(bool bMissignore, unsigned int threadNum_)
 {
     _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath);
     if (_savedFileTree)
     {
-        GFileTree * nowFileTree = GFileMgr::LoadFromPath(_GlobalWorkPath);
+        GFileTree * nowFileTree = GFileMgr::LoadFromPath(_GlobalWorkPath, threadNum_);
         GFileTree * thisFileTree = _savedFileTree->GetSubTree(nowFileTree->Root()->GlobalFullPath());
         
         DiffRepos(bMissignore, thisFileTree, nowFileTree);
@@ -137,12 +137,12 @@ void GPark::Status(bool bMissignore)
     }
 }
 
-void GPark::Tree(int depth)
+void GPark::Tree(int depth, unsigned int threadNum_)
 {
     // todo(gzy): tree show miss ignore.
     std::string treeStr;
     
-    GFileMgr::Tree(GFileMgr::LoadFromPath(_GlobalWorkPath)->Root(), &treeStr, false, depth);
+    GFileMgr::Tree(GFileMgr::LoadFromPath(_GlobalWorkPath, threadNum_)->Root(), &treeStr, false, depth);
     
     std::cout << treeStr << std::endl;
 }
@@ -171,7 +171,7 @@ void GPark::Save(unsigned threadNum_)
     {
         std::vector<GFile *> changesList, missList, addList;
         
-        GFileTree * nowFileTree = GFileMgr::LoadFromPath(_GlobalWorkPath);
+        GFileTree * nowFileTree = GFileMgr::LoadFromPath(_GlobalWorkPath, threadNum_);
         GFileTree * thisFileTree = _savedFileTree->GetSubTree(nowFileTree->Root()->GlobalFullPath());
         
         GFileMgr::DifferentFileList(true, thisFileTree, nowFileTree, changesList, missList, addList);

@@ -101,7 +101,21 @@ std::string GTools::FormatTimestampToYYMMDD_HHMMSS(long timestamp_)
 
 unsigned int GTools::HardwareThreadNum()
 {
-    int ret = std::thread::hardware_concurrency();
+    unsigned int ret = std::thread::hardware_concurrency();
+    return ret;
+}
+
+unsigned int GTools::GetRecommendThreadNum(unsigned int expectThreadNum_, int ratio_)
+{
+    unsigned int ret = std::thread::hardware_concurrency();
+    if (expectThreadNum_ == 0 || expectThreadNum_ > ret)
+    {
+        ret = (ret / 2) * ratio_;
+    }
+    else
+    {
+        ret = expectThreadNum_;
+    }
     return ret;
 }
 

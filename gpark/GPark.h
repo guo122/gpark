@@ -14,8 +14,8 @@ public:
     
 public:
     void InitDB(unsigned threadNum_);
-    void Status(bool bMissignore);
-    void Tree(int depth);
+    void Status(bool bMissignore, unsigned int threadNum_);
+    void Tree(int depth, unsigned int threadNum_);
     void Show(bool bVerbose, int depth);
     void Save(unsigned threadNum_);
     void Diff(const char * otherRepos_);

@@ -13,7 +13,7 @@ class GFileTree;
 class GFileMgr
 {
 public:
-    static GFileTree * LoadFromPath(const char * globalPath_);
+    static GFileTree * LoadFromPath(const char * globalPath_, unsigned int threadNum_);
     static void LoadIgnoreFile(const char * globalHomePath_);
     static void LoadMissIgnoreFile(const char * globalHomePath_);
     static void DifferentFileList(bool bMissIgnore,
@@ -26,6 +26,7 @@ public:
 public:
     static const char * GetGlobalFullPath(const char * parentPath_, const char * name_);
     static const char * GetGlobalFullPath(const char * fullPath_);
+    static const char * GetGlobalFullPathWithIgnore(const char * parentPath_, const char * name_);
     
 private:
     static void ExpandMissIgnoreSet(GFileTree * fileTree, std::set<const char *> & expandMissignoreSet_);

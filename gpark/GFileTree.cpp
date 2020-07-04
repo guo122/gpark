@@ -75,11 +75,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
     size_t currentCalShaSize = 0;
     size_t totalNeedShaSize = 0;
     std::vector<GFile *> sortList;
-    unsigned int hardwareThreadNum = GTools::HardwareThreadNum();
-    if (threadNum_ == 0 || threadNum_ > hardwareThreadNum)
-    {
-        threadNum_ = hardwareThreadNum / 2;
-    }
+    threadNum_ = GTools::GetRecommendThreadNum(threadNum_, 1);
     for (int i = 0; i < fileListSize; ++i)
     {
         if (_fileList[i]->IsNeedCalSha())
@@ -98,7 +94,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
     
     *outputRunning = true;
     GTools::FormatFileSize(totalNeedShaSize, outputLog, CONSOLE_COLOR_FONT_CYAN);
-    std::thread calShaLogThrad(GThreadHelper::PrintCalShaSize, threadNum_, &time_begin, &currentCalShaSize, outputLog, outputRunning);
+    std::thread calShaLogThread(GThreadHelper::PrintCalShaSize, threadNum_, &time_begin, &currentCalShaSize, outputLog, outputRunning);
     if (threadNum_ > 1 && sortList.size() > 1)
     {
         if (threadNum_ > sortList.size())
@@ -161,7 +157,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
         GThreadHelper::FileListCalSha(&sortList, &currentCalShaSize);
     }
     *outputRunning = false;
-    calShaLogThrad.join();
+    calShaLogThread.join();
     
     std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
     std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time_end - time_begin);

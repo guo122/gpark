@@ -15,6 +15,7 @@ public:
     
 public:
     static unsigned int HardwareThreadNum();
+    static unsigned int GetRecommendThreadNum(unsigned int expectThreadNum_, int ratio_);
     
 private:
     GTools();
