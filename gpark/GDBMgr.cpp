@@ -2,6 +2,7 @@
 #include <fstream>
 
 #include "3rd/sha1.h"
+#include "GThreadHelper.h"
 
 #include "GTools.h"
 #include "GFileTree.h"
@@ -91,11 +92,17 @@ GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, str
     
     char offsetFormatBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
     char sizeFormatBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
+    char outputBuf[1024];
+    bool * outputRunning = new bool;
+    *outputRunning = true;
     GTools::FormatFileSize(dbStat_.st_size, sizeFormatBuf, CONSOLE_COLOR_FONT_CYAN);
+    
+    std::thread outputThread(GThreadHelper::PrintLog, outputBuf, outputRunning);
+    
     while (offset < dbStat_.st_size)
     {
         GTools::FormatFileSize(offset, offsetFormatBuf, CONSOLE_COLOR_FONT_CYAN);
-        std::cout << "\r(" << offsetFormatBuf << "/" << sizeFormatBuf << ")" << std::flush;
+        sprintf(outputBuf, CONSOLE_CLEAR_LINE "\r(%s/%s)", offsetFormatBuf, sizeFormatBuf);
         
         size = *((size_t*)(dbBuffer_ + offset)) + DB_OFFSET_LENGTH;
 
@@ -120,7 +127,10 @@ GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, str
         
         offset += size;
     }
-    std::cout << "\r(" << sizeFormatBuf << ")..done" << std::endl;
+    *outputRunning = false;
+    outputThread.join();
+    delete outputRunning;
+    std::cout << CONSOLE_CLEAR_LINE "\r(" << sizeFormatBuf << ").." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
     
     return new GFileTree(root);
 }

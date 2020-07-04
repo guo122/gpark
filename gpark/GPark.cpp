@@ -47,7 +47,7 @@ void GPark::InitDB()
 
         GDBMgr::SaveDB(_GlobalHomePath, _savedFileTree);
         
-        std::cout << "init db done. " << std::endl;
+        std::cout << "init db " CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END" . " << std::endl;
     }
 }
 

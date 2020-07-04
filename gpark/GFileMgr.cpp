@@ -97,7 +97,7 @@ GFileTree * GFileMgr::LoadFromPath(const char * globalPath_)
         ++cacheIndex;
     }
     
-    std::cout << "(" CONSOLE_COLOR_FONT_CYAN << fileCount << CONSOLE_COLOR_END " files)..done" << std::endl;
+    std::cout << "(" CONSOLE_COLOR_FONT_CYAN << fileCount << CONSOLE_COLOR_END " files).." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
     
     return new GFileTree(root);
 }
@@ -161,6 +161,7 @@ void GFileMgr::LoadMissIgnoreFile(const char * globalHomePath_)
     }
 }
 
+// todo(gzy): different repos!!!
 void GFileMgr::DifferentFileList(bool bMissIgnore,
                                  GFileTree * thisFileTree, GFileTree * otherFileTree,
                                  std::vector<GFile*> & changesList,

@@ -18,6 +18,7 @@ GFile::GFile(char * data_, size_t size_, long & parent_id_)
     , _globalFullPath(nullptr)
     , _name(nullptr)
     , _bGenShaed(true)
+    , _bFolder(false)
 {
     size_t nameLength = size_ - SaveSize() - DB_OFFSET_LENGTH;
     char * buffer = new char[size_];
@@ -35,6 +36,7 @@ GFile::GFile(char * data_, size_t size_, long & parent_id_)
     memcpy(buffer, data_, sizeof(struct stat));
     data_ += sizeof(struct stat);
     _stat = *((struct stat*)buffer);
+    _bFolder = S_ISDIR(_stat.st_mode);
     
     memcpy(buffer, data_, nameLength + 1);
     data_ += nameLength + 1;
@@ -55,6 +57,7 @@ GFile::GFile(GFile * parent_, const char * globalFullPath_, struct dirent * dire
     , _globalFullPath(const_cast<char *>(globalFullPath_))
     , _name(nullptr)
     , _bGenShaed(false)
+    , _bFolder(false)
 {
     memset(_sha, 0, SHA_CHAR_LENGTH);
     
@@ -70,6 +73,7 @@ GFile::GFile(GFile * parent_, const char * globalFullPath_, struct dirent * dire
         _name[dirent_->d_namlen] = 0;
     }
     stat(_globalFullPath, &_stat);
+    _bFolder = S_ISDIR(_stat.st_mode);
 }
 
 GFile::~GFile()
@@ -113,40 +117,9 @@ const char * GFile::Name()
     return _name;
 }
 
-unsigned char * GFile::Sha(char * exportLog)
+unsigned char * GFile::Sha()
 {
-    if (!_bGenShaed)
-    {
-        _bGenShaed = true;
-        
-        GAssert(_globalFullPath, "has no full path.");
-        
-        if (_name != nullptr && !IsFolder())
-        {
-            if (exportLog)
-            {
-                strncpy(exportLog, "cal sha: (", 10);
-                GTools::FormatFileSize(_stat.st_size, exportLog + 10, CONSOLE_COLOR_FONT_CYAN);
-                strncpy(exportLog + strlen(exportLog), ") ", 3);
-//                strncpy(exportLog + strlen(exportLog), _name, strlen(_name) + 1);
-                
-                std::cout << exportLog << std::flush;
-            }
-            
-            blk_SHA_CTX ctx;
-            std::ifstream ifile;
-            ifile.open(_globalFullPath, std::ios::in | std::ios::binary);
-            char * buffer = new char[_stat.st_size];
-            ifile.read(buffer, _stat.st_size);
-
-            blk_SHA1_Init(&ctx);
-            blk_SHA1_Update(&ctx, buffer, _stat.st_size);
-            blk_SHA1_Final(_sha, &ctx);
-            
-            ifile.close();
-            delete[] buffer;
-        }
-    }
+    CalSha();
     return _sha;
 }
 
@@ -171,6 +144,7 @@ void GFile::CopyFrom(GFile * file_)
     _bGenShaed = file_->_bGenShaed;
     memcpy(_sha, file_->Sha(), SHA_CHAR_LENGTH);
     _stat = file_->Stat();
+    _bFolder = S_ISDIR(_stat.st_mode);
 }
 
 void GFile::GenFullPath()
@@ -236,7 +210,7 @@ bool GFile::IsChild(GFile * file_)
 
 bool GFile::IsFolder()
 {
-    return S_ISDIR(_stat.st_mode);
+    return _bFolder;
 }
 
 void GFile::SortChildren()
@@ -246,6 +220,42 @@ void GFile::SortChildren()
          else if (!x->IsFolder() && y->IsFolder()) return false;
          else return x->_id < y->_id;
      });
+}
+
+bool GFile::IsNeedCalSha()
+{
+    bool ret = !_bGenShaed && _name != nullptr && !_bFolder;
+    return ret;
+}
+
+void GFile::CalShaPreInfo(char * outputLog)
+{
+    char tempChar[FORMAT_FILESIZE_BUFFER_LENGTH];
+    GTools::FormatFileSize(_stat.st_size, tempChar, CONSOLE_COLOR_FONT_CYAN);
+    sprintf(outputLog, CONSOLE_CLEAR_LINE "\rcal sha(%s)", tempChar);
+}
+
+void GFile::CalSha()
+{
+    if (IsNeedCalSha())
+    {
+        _bGenShaed = true;
+        
+        GAssert(_globalFullPath, "has no full path.");
+        
+        blk_SHA_CTX ctx;
+        std::ifstream ifile;
+        ifile.open(_globalFullPath, std::ios::in | std::ios::binary);
+        char * buffer = new char[_stat.st_size];
+        ifile.read(buffer, _stat.st_size);
+        
+        blk_SHA1_Init(&ctx);
+        blk_SHA1_Update(&ctx, buffer, _stat.st_size);
+        blk_SHA1_Final(_sha, &ctx);
+        
+        ifile.close();
+        delete[] buffer;
+    }
 }
 
 std::string GFile::ToString(bool bVerbose)
@@ -275,7 +285,7 @@ std::string GFile::ToString(bool bVerbose)
     return tempChar;
 }
 
-size_t GFile::ToBin(char * data_, size_t offset_, char * exportLog)
+size_t GFile::ToBin(char * data_, size_t offset_)
 {
     size_t ret = SaveSize();
     char * cur = data_ + offset_;
@@ -301,7 +311,7 @@ size_t GFile::ToBin(char * data_, size_t offset_, char * exportLog)
     cur += strlen(_name) + 1;
     
     // sha
-    memcpy(cur, Sha(exportLog), SHA_CHAR_LENGTH);
+    memcpy(cur, Sha(), SHA_CHAR_LENGTH);
     
     return ret + DB_OFFSET_LENGTH;
 }

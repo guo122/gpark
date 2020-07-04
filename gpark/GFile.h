@@ -26,7 +26,7 @@ public:
     const char * CurrentPath();
     const char * GlobalFullPath();
     const char * Name();
-    unsigned char * Sha(char * exportLog = nullptr);
+    unsigned char * Sha();
     size_t ChildrenSize();
     GFile* Children(int index_);
     
@@ -41,8 +41,11 @@ public:
     bool IsChild(GFile * file_);
     bool IsFolder();
     void SortChildren();
+    bool IsNeedCalSha();
+    void CalShaPreInfo(char * outputLog);
+    void CalSha();
     std::string ToString(bool bVerbose);
-    size_t ToBin(char * data_, size_t offset_, char * exportLog);
+    size_t ToBin(char * data_, size_t offset_);
     
     size_t SaveSize();
     
@@ -60,6 +63,7 @@ private:
     char *          _globalFullPath;
     char *          _name;
     bool            _bGenShaed;
+    bool            _bFolder;
     unsigned char   _sha[SHA_CHAR_LENGTH];
     
 private:

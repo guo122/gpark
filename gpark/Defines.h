@@ -7,6 +7,8 @@
 
 #define CONSOLE_COLOR_END               "\033[0m"
 
+#define CONSOLE_CLEAR_LINE              "\033[2K"
+
 #define CONSOLE_COLOR_FONT_BLACK        "\033[30m"
 #define CONSOLE_COLOR_FONT_RED          "\033[31m"
 #define CONSOLE_COLOR_FONT_GREEN        "\033[32m"
