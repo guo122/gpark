@@ -72,7 +72,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
     
     size_t totalNeedShaSize = 0;
     std::vector<GFile *> sortList;
-    unsigned int hardwareThreadNum = std::thread::hardware_concurrency();
+    unsigned int hardwareThreadNum = GTools::HardwareThreadNum();
     if (threadNum_ == 0 || threadNum_ > hardwareThreadNum)
     {
         threadNum_ = hardwareThreadNum / 2;

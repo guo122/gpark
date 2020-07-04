@@ -1,4 +1,6 @@
 
+#include <thread>
+
 #include <CommonCrypto/CommonDigest.h>
 //#include <openssl/sha.h>
 
@@ -95,6 +97,12 @@ std::string GTools::FormatTimestampToYYMMDD_HHMMSS(long timestamp_)
     strftime(charBuffer, 100, "%y%m%d_%H%M%S", tmpTm);
     
     return charBuffer;
+}
+
+unsigned int GTools::HardwareThreadNum()
+{
+    int ret = std::thread::hardware_concurrency();
+    return ret;
 }
 
 GTools::GTools()

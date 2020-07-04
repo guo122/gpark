@@ -1,5 +1,6 @@
 
 #include "GPark.h"
+#include "GTools.h"
 
 int main(int argc, const char * argv[])
 {
@@ -72,6 +73,10 @@ int main(int argc, const char * argv[])
         {
             GPark::Instance()->Diff(argv[2]);
         }
+        else if (strcmp(argv[1], "info") == 0)
+        {
+            std::cout << "hardware thread num: " CONSOLE_COLOR_FONT_YELLOW << GTools::HardwareThreadNum() << CONSOLE_COLOR_END << std::endl;
+        }
         else
         {
             // todo(gzy): opt arguments.
@@ -83,6 +88,7 @@ int main(int argc, const char * argv[])
             std::cout << "\tgpark showv [depth]" << std::endl;
             std::cout << "\tgpark save [threads]" << std::endl;
             std::cout << "\tgpark diff <other repos>" << std::endl;
+            std::cout << "\tgpark info" << std::endl;
         }
     }
 

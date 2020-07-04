@@ -13,6 +13,9 @@ public:
     static std::string FormatShaToHex(unsigned char * sha_);
     static std::string FormatTimestampToYYMMDD_HHMMSS(long timestamp_);
     
+public:
+    static unsigned int HardwareThreadNum();
+    
 private:
     GTools();
     ~GTools();
