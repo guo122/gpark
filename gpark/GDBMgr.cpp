@@ -74,6 +74,8 @@ void GDBMgr::VersionConvert(char oriDBVerion,
 
 GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, struct stat & dbStat_)
 {
+    std::chrono::steady_clock::time_point time_begin = std::chrono::steady_clock::now();
+    
     GFile * root = nullptr;
     GFile * parent = nullptr;
     GFile * cur = nullptr;
@@ -92,16 +94,20 @@ GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, str
     char offsetFormatBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
     char sizeFormatBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
     char outputBuf[1024];
-    bool * outputRunning = new bool;
-    *outputRunning = true;
+    bool outputRunning = true;
     GTools::FormatFileSize(dbStat_.st_size, sizeFormatBuf, CONSOLE_COLOR_FONT_CYAN);
     
-    std::thread outputThread(GThreadHelper::PrintLog, outputBuf, outputRunning);
+    std::thread outputThread(GThreadHelper::PrintLog, outputBuf, &outputRunning);
     
+    std::chrono::steady_clock::time_point time_end;
+    std::chrono::duration<double> time_span;
     while (offset < dbStat_.st_size)
     {
+        time_end = std::chrono::steady_clock::now();
+        time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time_end - time_begin);
+        
         GTools::FormatFileSize(offset, offsetFormatBuf, CONSOLE_COLOR_FONT_CYAN);
-        sprintf(outputBuf, CONSOLE_CLEAR_LINE "\r(%s/%s)", offsetFormatBuf, sizeFormatBuf);
+        sprintf(outputBuf, CONSOLE_CLEAR_LINE "\r(%s/%s)" CONSOLE_COLOR_FONT_YELLOW "%.2fs" CONSOLE_COLOR_END, offsetFormatBuf, sizeFormatBuf, time_span.count());
         
         size = *((size_t*)(dbBuffer_ + offset)) + DB_OFFSET_LENGTH;
 
@@ -126,10 +132,17 @@ GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, str
         
         offset += size;
     }
-    *outputRunning = false;
+    outputRunning = false;
     outputThread.join();
-    delete outputRunning;
-    std::cout << CONSOLE_CLEAR_LINE "\r(" << sizeFormatBuf << ").." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
+    
+    time_end = std::chrono::steady_clock::now();
+    time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time_end - time_begin);
+    
+    // todo(gzy): how cout .2f
+    char tempBuffer[50];
+    sprintf(tempBuffer, "%.2f", time_span.count());
+    
+    std::cout << CONSOLE_CLEAR_LINE "\r(" << sizeFormatBuf << ")" CONSOLE_COLOR_FONT_YELLOW << tempBuffer << "s" CONSOLE_COLOR_END ".." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
     
     return new GFileTree(root);
 }

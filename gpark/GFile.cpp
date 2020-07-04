@@ -217,7 +217,7 @@ void GFile::SortChildren()
     std::sort(_children.begin(), _children.end(), [](GFile * & x, GFile * & y){
          if (x->IsFolder() && !y->IsFolder()) return true;
          else if (!x->IsFolder() && y->IsFolder()) return false;
-         else return x->_id < y->_id;
+         else return strcmp(x->Name(), y->Name()) < 0;
      });
 }
 

@@ -1,6 +1,7 @@
 
 #include <string>
 #include <fstream>
+#include <list>
 
 #include <errno.h>
 #include <dirent.h>
@@ -43,26 +44,23 @@ GFileTree * GFileMgr::LoadFromPath(const char * globalPath_, unsigned int thread
     
     std::cout << "loading...folder (" CONSOLE_COLOR_FONT_CYAN << globalPath_ << CONSOLE_COLOR_END ")" << std::flush;
     
-    std::vector<std::vector<GFile *> *> childrenAppendLists;
-    std::vector<bool *> threadRunningList;
+    std::vector<std::list<GFile *> *> splitFileLists;
     
-    std::thread outputThread(GThreadHelper::PrintLoadFolder, threadNum_, &time_begin, &fileCount, &outputRunning);
+    std::thread outputThread(GThreadHelper::PrintLoadFolder, &splitFileLists, &time_begin, &fileCount, &outputRunning);
 
     if (threadNum_ > 1)
     {
         std::vector<std::thread *> splitThreads;
         for (int i = 0; i < threadNum_; ++i)
         {
-            std::vector<GFile *> * splitFileList = new std::vector<GFile *>();
-            childrenAppendLists.push_back(splitFileList);
-            threadRunningList.push_back(new bool);
+            std::list<GFile *> * splitFileList = new std::list<GFile *>();
+            splitFileLists.push_back(splitFileList);
         }
-        childrenAppendLists[0]->push_back(root);
-        *(threadRunningList[0]) = true;
+        splitFileLists[0]->push_back(root);
 
         for (int i = 0; i < threadNum_; ++i)
         {
-            splitThreads.push_back(new std::thread(GThreadHelper::OpenFolder, childrenAppendLists, i, &fileCount, &folderCount, threadRunningList));
+            splitThreads.push_back(new std::thread(GThreadHelper::OpenFolder, splitFileLists, i, &fileCount, &folderCount));
         }
         
         for (int i = 0; i < threadNum_; ++i)
@@ -73,25 +71,29 @@ GFileTree * GFileMgr::LoadFromPath(const char * globalPath_, unsigned int thread
         for (int i = 0; i < threadNum_; ++i)
         {
             delete splitThreads[i];
-            delete childrenAppendLists[i];
-            delete threadRunningList[i];
+            delete splitFileLists[i];
         }
     }
     else
     {
-        std::vector<GFile *> fileList;
-        bool bRunning = true;
+        std::list<GFile *> fileList;
         fileList.push_back(root);
-        threadRunningList.push_back(&bRunning);
-        childrenAppendLists.push_back(&fileList);
+        splitFileLists.push_back(&fileList);
         
-        GThreadHelper::OpenFolder(childrenAppendLists, 0, &fileCount, &folderCount, threadRunningList);
+        GThreadHelper::OpenFolder(splitFileLists, 0, &fileCount, &folderCount);
     }
     
     outputRunning = false;
     outputThread.join();
 
-    std::cout << CONSOLE_CLEAR_LINE "\r(" CONSOLE_COLOR_FONT_CYAN << fileCount << CONSOLE_COLOR_END " files).." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
+    std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time_end - time_begin);
+    
+    // todo(gzy): how cout .2f
+    char tempBuffer[50];
+    sprintf(tempBuffer, "%.2f", time_span.count());
+    
+    std::cout << CONSOLE_CLEAR_LINE "\r(" CONSOLE_COLOR_FONT_CYAN << fileCount << CONSOLE_COLOR_END " files)" CONSOLE_COLOR_FONT_YELLOW << tempBuffer << "s" CONSOLE_COLOR_END ".." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
     
     return new GFileTree(root);
 }

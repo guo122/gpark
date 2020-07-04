@@ -70,7 +70,9 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
     
     auto fileListSize = _fileList.size();
     char outputLog[1024];
-    bool * outputRunning = new bool;
+    // todo(gzy): now
+    bool outputRunning = true;
+    std::vector<bool *> calShaThreadRunningList;
     
     size_t currentCalShaSize = 0;
     size_t totalNeedShaSize = 0;
@@ -91,10 +93,11 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
         else if (x->Stat().st_size < y->Stat().st_size) return false;
         else return false;
     });
+    std::vector<std::thread *> threadList;
     
-    *outputRunning = true;
+    outputRunning = true;
     GTools::FormatFileSize(totalNeedShaSize, outputLog, CONSOLE_COLOR_FONT_CYAN);
-    std::thread calShaLogThread(GThreadHelper::PrintCalShaSize, threadNum_, &time_begin, &currentCalShaSize, outputLog, outputRunning);
+    std::thread calShaLogThread(GThreadHelper::PrintCalShaSize, &calShaThreadRunningList, &time_begin, &currentCalShaSize, outputLog, &outputRunning);
     if (threadNum_ > 1 && sortList.size() > 1)
     {
         if (threadNum_ > sortList.size())
@@ -103,7 +106,6 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
         }
         std::vector<std::vector<GFile *> *> splitFileLists;
         std::vector<size_t> splitListSize;
-        std::vector<std::thread *> threadList;
         std::thread * splitThread;
         
         std::cout << "cal sha" << std::flush;
@@ -114,6 +116,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
             std::vector<GFile *> * splitFileList = new std::vector<GFile *>();
             splitFileLists.push_back(splitFileList);
             splitListSize.push_back(0);
+            calShaThreadRunningList.push_back(new bool);
         }
         
         int currentShorterIndex = 0;
@@ -137,7 +140,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
         
         for (int i = 0; i < threadNum_; ++i)
         {
-            splitThread = new std::thread(GThreadHelper::FileListCalSha, splitFileLists[i], &currentCalShaSize);
+            splitThread = new std::thread(GThreadHelper::FileListCalSha, splitFileLists[i], &currentCalShaSize, calShaThreadRunningList[i]);
             threadList.push_back(splitThread);
         }
         
@@ -150,13 +153,16 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
         {
             delete threadList[i];
             delete splitFileLists[i];
+            delete calShaThreadRunningList[i];
         }
     }
     else
     {
-        GThreadHelper::FileListCalSha(&sortList, &currentCalShaSize);
+        calShaThreadRunningList.push_back(new bool);
+        GThreadHelper::FileListCalSha(&sortList, &currentCalShaSize, calShaThreadRunningList[0]);
+        delete calShaThreadRunningList[0];
     }
-    *outputRunning = false;
+    outputRunning = false;
     calShaLogThread.join();
     
     std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
@@ -168,17 +174,16 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
     std::cout << CONSOLE_CLEAR_LINE "\rcal sha (" << outputLog << ")" CONSOLE_COLOR_FONT_YELLOW << tempBuffer << "s" <<  CONSOLE_COLOR_END ".." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
     
     size_t offset = 0;
-    *outputRunning = true;
-    std::thread toBinLogThread(GThreadHelper::PrintLog, outputLog, outputRunning);
+    outputRunning = true;
+    std::thread toBinLogThread(GThreadHelper::PrintLog, outputLog, &outputRunning);
     for (int i = 1; i < fileListSize; ++i)
     {
         sprintf(outputLog, CONSOLE_CLEAR_LINE "\rto bin (" CONSOLE_COLOR_FONT_CYAN "%d/%ld" CONSOLE_COLOR_END ")", i, fileListSize - 1);
         offset += _fileList[i]->ToBin(data_, offset);
         memcpy(totalSha_ + ((i - 1) * SHA_CHAR_LENGTH), _fileList[i]->Sha(), SHA_CHAR_LENGTH);
     }
-    *outputRunning = false;
+    outputRunning = false;
     toBinLogThread.join();
-    delete outputRunning;
     std::cout << CONSOLE_CLEAR_LINE "\rto bin (" CONSOLE_COLOR_FONT_CYAN << fileListSize - 1 << CONSOLE_COLOR_END ").." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
 }
 
