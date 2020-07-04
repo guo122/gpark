@@ -24,7 +24,7 @@ GPark * GPark::Instance()
     return _instance;
 }
 
-void GPark::InitDB()
+void GPark::InitDB(unsigned threadNum_)
 {
     std::cout << "init..." << std::endl;
     std::string workPathStr = _GlobalWorkPath;
@@ -45,7 +45,7 @@ void GPark::InitDB()
         
         _savedFileTree = GFileMgr::LoadFromPath(_GlobalHomePath);
 
-        GDBMgr::SaveDB(_GlobalHomePath, _savedFileTree);
+        GDBMgr::SaveDB(_GlobalHomePath, _savedFileTree, threadNum_);
         
         std::cout << "init db " CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END" . " << std::endl;
     }
@@ -164,7 +164,7 @@ void GPark::Show(bool bVerbose, int depth)
     }
 }
 
-void GPark::Save()
+void GPark::Save(unsigned threadNum_)
 {
     _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath);
     if (_savedFileTree)
@@ -204,7 +204,7 @@ void GPark::Save()
             _savedFileTree->Refresh(false);
         }
         
-        GDBMgr::SaveDB(_GlobalHomePath, _savedFileTree);
+        GDBMgr::SaveDB(_GlobalHomePath, _savedFileTree, threadNum_);
     }
     else
     {

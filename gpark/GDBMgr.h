@@ -16,7 +16,7 @@ class GDBMgr
      */
 public:
     static GFileTree * LoadDB(const char * globalHomePath_);
-    static void SaveDB(const char * globalHomePath_, GFileTree * fileTree_);
+    static void SaveDB(const char * globalHomePath_, GFileTree * fileTree_, unsigned threadNum_);
     
 public:
     static char CheckDBVersion(char * dbBuffer_);
@@ -31,7 +31,7 @@ private:
     static GFileTree * LoadDBV1(const char * globalHomePath_, char * dbBuffer_, struct stat & dbStat_);
     
 private:
-    static void SaveDBV1(const char * globalHomePath_, GFileTree * fileTree_);
+    static void SaveDBV1(const char * globalHomePath_, GFileTree * fileTree_, unsigned threadNum_);
     
 private:
     GDBMgr();

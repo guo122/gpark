@@ -11,7 +11,14 @@ int main(int argc, const char * argv[])
     {
         if (strcmp(argv[1], "init") == 0)
         {
-            GPark::Instance()->InitDB();
+            if (argc > 2)
+            {
+                GPark::Instance()->InitDB(atoi(argv[2]));
+            }
+            else
+            {
+                GPark::Instance()->InitDB(0);
+            }
         }
         else if (strcmp(argv[1], "status") == 0)
         {
@@ -52,7 +59,14 @@ int main(int argc, const char * argv[])
         }
         else if (strcmp(argv[1], "save") == 0)
         {
-            GPark::Instance()->Save();
+            if (argc > 2)
+            {
+                GPark::Instance()->Save(atoi(argv[2]));
+            }
+            else
+            {
+                GPark::Instance()->Save(0);
+            }
         }
         else if (argc > 2 && strcmp(argv[1], "diff") == 0)
         {
@@ -62,12 +76,12 @@ int main(int argc, const char * argv[])
         {
             // todo(gzy): opt arguments.
             std::cout << "gpark " MAIN_VERSION " usage:" << std::endl;
-            std::cout << "\tgpark init" << std::endl;
+            std::cout << "\tgpark init [threads]" << std::endl;
             std::cout << "\tgpark status" << std::endl;
             std::cout << "\tgpark tree [depth]" << std::endl;
             std::cout << "\tgpark show [depth]" << std::endl;
             std::cout << "\tgpark showv [depth]" << std::endl;
-            std::cout << "\tgpark save" << std::endl;
+            std::cout << "\tgpark save [threads]" << std::endl;
             std::cout << "\tgpark diff <other repos>" << std::endl;
         }
     }

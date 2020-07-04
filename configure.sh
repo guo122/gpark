@@ -6,6 +6,7 @@ cmake -E make_directory "Solution/make" && cmake -E chdir "Solution/make" cmake 
 
 link_info=`cat Solution/make/*/CMakeFiles/*.dir/link.txt`
 bin_path="bin/"${link_info##*-o\ ..\/..\/..\/bin\/}
+bin_path=${bin_path%%-L*}
 
 echo "all:" > Makefile
 echo "	cd Solution/make && make" >> Makefile

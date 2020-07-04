@@ -64,7 +64,7 @@ size_t GFileTree::CheckSize()
     return ret;
 }
 
-void GFileTree::ToBin(char * data_, char * totalSha_)
+void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
 {
     auto fileListSize = _fileList.size();
     char outputLog[1024];
@@ -72,7 +72,11 @@ void GFileTree::ToBin(char * data_, char * totalSha_)
     
     size_t totalNeedShaSize = 0;
     std::vector<GFile *> sortList;
-    unsigned int threadNum = std::thread::hardware_concurrency() / 2;
+    unsigned int hardwareThreadNum = std::thread::hardware_concurrency();
+    if (threadNum_ == 0 || threadNum_ > hardwareThreadNum)
+    {
+        threadNum_ = hardwareThreadNum / 2;
+    }
     for (int i = 0; i < fileListSize; ++i)
     {
         if (_fileList[i]->IsNeedCalSha())
@@ -91,11 +95,11 @@ void GFileTree::ToBin(char * data_, char * totalSha_)
     
     GTools::FormatFileSize(totalNeedShaSize, outputLog, CONSOLE_COLOR_FONT_CYAN);
     
-    if (threadNum > 1 && sortList.size() > 1)
+    if (threadNum_ > 1 && sortList.size() > 1)
     {
-        if (threadNum > sortList.size())
+        if (threadNum_ > sortList.size())
         {
-            threadNum = sortList.size();
+            threadNum_ = sortList.size();
         }
         std::vector<std::vector<GFile *> *> splitFileLists;
         std::vector<size_t> splitListSize;
@@ -104,7 +108,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_)
         
         std::cout << "cal sha" << std::flush;
         
-        for (int i = 0; i < threadNum; ++i)
+        for (int i = 0; i < threadNum_; ++i)
         {
             // todo(gzy): need opt.
             std::vector<GFile *> * splitFileList = new std::vector<GFile *>();
@@ -118,7 +122,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_)
         {
             currentShorterIndex = 0;
             currentShorterSize = totalNeedShaSize;
-            for (int j = 0; j < threadNum; ++j)
+            for (int j = 0; j < threadNum_; ++j)
             {
                 if (splitListSize[j] < currentShorterSize)
                 {
@@ -131,13 +135,13 @@ void GFileTree::ToBin(char * data_, char * totalSha_)
             splitListSize[currentShorterIndex] += sortList[i]->Stat().st_size;
         }
         
-        for (int i = 0; i < threadNum; ++i)
+        for (int i = 0; i < threadNum_; ++i)
         {
             splitThread = new std::thread(GThreadHelper::FileListCalSha, splitFileLists[i]);
             threadList.push_back(splitThread);
         }
         
-        for (int i = 0; i < threadNum; ++i)
+        for (int i = 0; i < threadNum_; ++i)
         {
             threadList[i]->join();
         }
@@ -145,7 +149,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_)
 
         std::cout << CONSOLE_CLEAR_LINE "\rcal sha (" << outputLog << ").." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
         
-        for (int i = 0; i < threadNum; ++i)
+        for (int i = 0; i < threadNum_; ++i)
         {
             delete threadList[i];
             delete splitFileLists[i];

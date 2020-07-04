@@ -1,7 +1,6 @@
 
 #include <fstream>
 
-#include "3rd/sha1.h"
 #include "GThreadHelper.h"
 
 #include "GTools.h"
@@ -48,10 +47,10 @@ GFileTree * GDBMgr::LoadDB(const char * globalHomePath_)
     return ret;
 }
 
-void GDBMgr::SaveDB(const char * globalHomePath_, GFileTree * fileTree_)
+void GDBMgr::SaveDB(const char * globalHomePath_, GFileTree * fileTree_, unsigned threadNum_)
 {
 #if DB_VERSION == DB_VERSION_V1
-    SaveDBV1(globalHomePath_, fileTree_);
+    SaveDBV1(globalHomePath_, fileTree_, threadNum_);
 #else
     GAssert(false, "this db version not support.";)
 #endif
@@ -135,7 +134,7 @@ GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, str
     return new GFileTree(root);
 }
 
-void GDBMgr::SaveDBV1(const char * globalHomePath_, GFileTree * fileTree_)
+void GDBMgr::SaveDBV1(const char * globalHomePath_, GFileTree * fileTree_, unsigned threadNum_)
 {
     char dbVersion = 1;
     std::ofstream ofile;
@@ -149,13 +148,10 @@ void GDBMgr::SaveDBV1(const char * globalHomePath_, GFileTree * fileTree_)
     
     size_t totalShaBufferLength = (fileTree_->GetFileList().size() - 1) * SHA_CHAR_LENGTH;
     char * totalShaBuffer = new char [totalShaBufferLength];
-    fileTree_->ToBin(writeBuffer + 1 + SHA_CHAR_LENGTH, totalShaBuffer);
+    fileTree_->ToBin(writeBuffer + 1 + SHA_CHAR_LENGTH, totalShaBuffer, threadNum_);
     
     unsigned char dbSha[SHA_CHAR_LENGTH];
-    blk_SHA_CTX ctx;
-    blk_SHA1_Init(&ctx);
-    blk_SHA1_Update(&ctx, totalShaBuffer, totalShaBufferLength);
-    blk_SHA1_Final(dbSha, &ctx);
+    GTools::CalculateSHA1(totalShaBuffer, totalShaBufferLength, dbSha);
     
     memcpy(writeBuffer + 1, dbSha, SHA_CHAR_LENGTH);
     

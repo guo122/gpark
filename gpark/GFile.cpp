@@ -1,7 +1,6 @@
 
 #include <fstream>
 #include <dirent.h>
-#include "3rd/sha1.h"
 
 #include "GTools.h"
 #include "GPark.h"
@@ -243,15 +242,12 @@ void GFile::CalSha()
         
         GAssert(_globalFullPath, "has no full path.");
         
-        blk_SHA_CTX ctx;
         std::ifstream ifile;
         ifile.open(_globalFullPath, std::ios::in | std::ios::binary);
         char * buffer = new char[_stat.st_size];
         ifile.read(buffer, _stat.st_size);
-        
-        blk_SHA1_Init(&ctx);
-        blk_SHA1_Update(&ctx, buffer, _stat.st_size);
-        blk_SHA1_Final(_sha, &ctx);
+
+        GTools::CalculateSHA1(buffer, _stat.st_size, _sha);
         
         ifile.close();
         delete[] buffer;
