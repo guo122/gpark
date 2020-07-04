@@ -1,7 +1,7 @@
 
 #include <thread>
 
-#include <CommonCrypto/CommonDigest.h>
+//#include <CommonCrypto/CommonDigest.h>
 //#include <openssl/sha.h>
 
 #include "3rd/sha1.h"
@@ -63,16 +63,16 @@ void GTools::CalculateSHA1(const void * data_, size_t len_, unsigned char * sha_
 //    SHA1_Update(&ctx, data_, len_);
 //    SHA1_Final(sha_, &ctx);
     
-//    blk_SHA_CTX ctx;
-//    blk_SHA1_Init(&ctx);
-//    blk_SHA1_Update(&ctx, data_, len_);
-//    blk_SHA1_Final(sha_, &ctx);
+    blk_SHA_CTX ctx;
+    blk_SHA1_Init(&ctx);
+    blk_SHA1_Update(&ctx, data_, len_);
+    blk_SHA1_Final(sha_, &ctx);
     
-    // todo(gzy): platform?
-    CC_SHA1_CTX ctx;
-    CC_SHA1_Init(&ctx);
-    CC_SHA1_Update(&ctx, data_, len_);
-    CC_SHA1_Final(sha_, &ctx);
+    // todo(gzy): int32???
+//    CC_SHA1_CTX ctx;
+//    CC_SHA1_Init(&ctx);
+//    CC_SHA1_Update(&ctx, data_, len_);
+//    CC_SHA1_Final(sha_, &ctx);
 }
 
 std::string GTools::FormatShaToHex(unsigned char * sha_)

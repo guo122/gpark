@@ -66,10 +66,13 @@ size_t GFileTree::CheckSize()
 
 void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
 {
+    std::chrono::steady_clock::time_point time_begin = std::chrono::steady_clock::now();
+    
     auto fileListSize = _fileList.size();
     char outputLog[1024];
     bool * outputRunning = new bool;
     
+    size_t currentCalShaSize = 0;
     size_t totalNeedShaSize = 0;
     std::vector<GFile *> sortList;
     unsigned int hardwareThreadNum = GTools::HardwareThreadNum();
@@ -93,8 +96,9 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
         else return false;
     });
     
+    *outputRunning = true;
     GTools::FormatFileSize(totalNeedShaSize, outputLog, CONSOLE_COLOR_FONT_CYAN);
-    
+    std::thread calShaLogThrad(GThreadHelper::PrintCalShaSize, threadNum_, &time_begin, &currentCalShaSize, outputLog, outputRunning);
     if (threadNum_ > 1 && sortList.size() > 1)
     {
         if (threadNum_ > sortList.size())
@@ -137,7 +141,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
         
         for (int i = 0; i < threadNum_; ++i)
         {
-            splitThread = new std::thread(GThreadHelper::FileListCalSha, splitFileLists[i]);
+            splitThread = new std::thread(GThreadHelper::FileListCalSha, splitFileLists[i], &currentCalShaSize);
             threadList.push_back(splitThread);
         }
         
@@ -145,9 +149,6 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
         {
             threadList[i]->join();
         }
-        
-
-        std::cout << CONSOLE_CLEAR_LINE "\rcal sha (" << outputLog << ").." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
         
         for (int i = 0; i < threadNum_; ++i)
         {
@@ -157,9 +158,18 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
     }
     else
     {
-        GThreadHelper::FileListCalSha(&sortList);
-        std::cout << CONSOLE_CLEAR_LINE "\rcal sha (" << outputLog << ").." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
+        GThreadHelper::FileListCalSha(&sortList, &currentCalShaSize);
     }
+    *outputRunning = false;
+    calShaLogThrad.join();
+    
+    std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time_end - time_begin);
+    
+    // todo(gzy): how cout .2f
+    char tempBuffer[50];
+    sprintf(tempBuffer, "%.2f", time_span.count());
+    std::cout << CONSOLE_CLEAR_LINE "\rcal sha (" << outputLog << ")" CONSOLE_COLOR_FONT_YELLOW << tempBuffer << "s" <<  CONSOLE_COLOR_END ".." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
     
     size_t offset = 0;
     *outputRunning = true;
