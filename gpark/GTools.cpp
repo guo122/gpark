@@ -129,6 +129,59 @@ std::string GTools::FormatTimestampToYYMMDD_HHMMSS(long timestamp_)
     return charBuffer;
 }
 
+void GTools::FormatTimeduration(const double & duration_, char * str_)
+{
+    sprintf(str_, "%.2fs", duration_);
+//    long totalSecond = duration_;
+//    if (totalSecond >= 60)
+//    {
+//        int len = strlen(str_);
+//        char decimal[3], hourBuf[10], minBuf[6], secBuf[6];
+//        decimal[0] = str_[len - 2];
+//        decimal[1] = str_[len - 1];
+//        decimal[2] = 0;
+//
+//        int hour = totalSecond / 3600;
+//        int min = totalSecond % 3600 / 60;
+//        int sec = totalSecond % 60;
+//
+//        if (hour > 0)
+//        {
+//            sprintf(hourBuf, "%dh", hour);
+//            sprintf(minBuf, "00m");
+//        }
+//        else
+//        {
+//            hourBuf[0] = 0;
+//            minBuf[0] = 0;
+//        }
+//
+//        if (min > 0 && min < 10)
+//        {
+//            sprintf(minBuf, "0%dm", min);
+//        }
+//        else if (min >= 10)
+//        {
+//            sprintf(minBuf, "%dm", min);
+//        }
+//
+//        if (sec == 0)
+//        {
+//            sprintf(secBuf, "00");
+//        }
+//        else if (sec < 10)
+//        {
+//            sprintf(secBuf, "0%d", sec);
+//        }
+//        else
+//        {
+//            sprintf(secBuf, "%d", sec);
+//        }
+//
+//        sprintf(str_, "%s%s%s.%ss", hourBuf, minBuf, secBuf, decimal);
+//    }
+}
+
 unsigned int GTools::HardwareThreadNum()
 {
     unsigned int ret = std::thread::hardware_concurrency();

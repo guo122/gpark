@@ -23,6 +23,7 @@ namespace GThreadHelper
         char sizeFormatBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
         char fileCountBuf[50];
         char outputLog[1024];
+        char timeSpanBuf[30];
         int threadNum = 1;
         while (*running_)
         {
@@ -37,9 +38,10 @@ namespace GThreadHelper
             std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
             std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time_end - (*time_begin_));
             
-            GTools::FormatFileSize(*currentSize_, sizeFormatBuf, CONSOLE_COLOR_FONT_GREEN);
+            GTools::FormatFileSize(*currentSize_, sizeFormatBuf);
             GTools::FormatNumber(*currentFileCount_, fileCountBuf);
-            sprintf(outputLog, CONSOLE_CLEAR_LINE "\r[" CONSOLE_COLOR_FONT_PURPLE "%d" CONSOLE_COLOR_END "]cal sha (%s/%s)(" CONSOLE_COLOR_FONT_CYAN "%s/%s" CONSOLE_COLOR_END ")" CONSOLE_COLOR_FONT_YELLOW "%.2fs" CONSOLE_COLOR_END, threadNum, sizeFormatBuf, totalSize_, fileCountBuf, totalFileCount_, time_span.count());
+            GTools::FormatTimeduration(time_span.count(), timeSpanBuf);
+            sprintf(outputLog, CONSOLE_CLEAR_LINE "\r[" CONSOLE_COLOR_FONT_PURPLE "%d" CONSOLE_COLOR_END "]cal sha (" CONSOLE_COLOR_FONT_GREEN "%s/%s" CONSOLE_COLOR_END ")(" CONSOLE_COLOR_FONT_CYAN "%s/%s" CONSOLE_COLOR_END ")" CONSOLE_COLOR_FONT_YELLOW "%s" CONSOLE_COLOR_END, threadNum, sizeFormatBuf, totalSize_, fileCountBuf, totalFileCount_, timeSpanBuf);
             std::cout << outputLog << std::flush;
             std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
@@ -48,6 +50,7 @@ namespace GThreadHelper
     {
         char outputLog[1024];
         char tempFilesCountBuffer[50];
+        char timeSpanBuf[30];
         int threadNum = 1;
         while (*running_)
         {
@@ -63,8 +66,9 @@ namespace GThreadHelper
             std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time_end - (*time_begin_));
             
             GTools::FormatNumber(*currentFileCount_, tempFilesCountBuffer);
+            GTools::FormatTimeduration(time_span.count(), timeSpanBuf);
             
-            sprintf(outputLog, CONSOLE_CLEAR_LINE "\r[" CONSOLE_COLOR_FONT_PURPLE "%d" CONSOLE_COLOR_END "]loading %s files." CONSOLE_COLOR_FONT_YELLOW "%.2fs" CONSOLE_COLOR_END, threadNum, tempFilesCountBuffer, time_span.count());
+            sprintf(outputLog, CONSOLE_CLEAR_LINE "\r[" CONSOLE_COLOR_FONT_PURPLE "%d" CONSOLE_COLOR_END "]loading %s files." CONSOLE_COLOR_FONT_YELLOW "%s" CONSOLE_COLOR_END, threadNum, tempFilesCountBuffer, timeSpanBuf);
             std::cout << outputLog << std::flush;
             std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }

@@ -93,6 +93,7 @@ GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, str
     
     char offsetFormatBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
     char sizeFormatBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
+    char timeSpanBuf[30];
     char outputBuf[1024];
     bool outputRunning = true;
     GTools::FormatFileSize(dbStat_.st_size, sizeFormatBuf, CONSOLE_COLOR_FONT_CYAN);
@@ -107,7 +108,8 @@ GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, str
         time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time_end - time_begin);
         
         GTools::FormatFileSize(offset, offsetFormatBuf, CONSOLE_COLOR_FONT_CYAN);
-        sprintf(outputBuf, CONSOLE_CLEAR_LINE "\r(%s/%s)" CONSOLE_COLOR_FONT_YELLOW "%.2fs" CONSOLE_COLOR_END, offsetFormatBuf, sizeFormatBuf, time_span.count());
+        GTools::FormatTimeduration(time_span.count(), timeSpanBuf);
+        sprintf(outputBuf, CONSOLE_CLEAR_LINE "\r(%s/%s)" CONSOLE_COLOR_FONT_YELLOW "%s" CONSOLE_COLOR_END, offsetFormatBuf, sizeFormatBuf, timeSpanBuf);
         
         size = *((size_t*)(dbBuffer_ + offset)) + DB_OFFSET_LENGTH;
 
@@ -138,11 +140,9 @@ GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, str
     time_end = std::chrono::steady_clock::now();
     time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time_end - time_begin);
     
-    // todo(gzy): how cout .2f
-    char tempBuffer[50];
-    sprintf(tempBuffer, "%.2f", time_span.count());
+    GTools::FormatTimeduration(time_span.count(), timeSpanBuf);
     
-    std::cout << CONSOLE_CLEAR_LINE "\r(" << sizeFormatBuf << ")" CONSOLE_COLOR_FONT_YELLOW << tempBuffer << "s" CONSOLE_COLOR_END ".." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
+    std::cout << CONSOLE_CLEAR_LINE "\r(" << sizeFormatBuf << ")" CONSOLE_COLOR_FONT_YELLOW << timeSpanBuf << CONSOLE_COLOR_END ".." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
     
     return new GFileTree(root);
 }

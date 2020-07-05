@@ -89,12 +89,11 @@ GFileTree * GFileMgr::LoadFromPath(const char * globalPath_, unsigned int thread
     std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
     std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time_end - time_begin);
     
-    // todo(gzy): how cout .2f
-    char tempTimeBuffer[50], tempFilesCountBuffer[50];
-    sprintf(tempTimeBuffer, "%.2f", time_span.count());
+    char timeSpanBuf[30], tempFilesCountBuffer[50];
+    GTools::FormatTimeduration(time_span.count(), timeSpanBuf);
     GTools::FormatNumber(fileCount, tempFilesCountBuffer);
     
-    std::cout << CONSOLE_CLEAR_LINE "\r(" CONSOLE_COLOR_FONT_CYAN << tempFilesCountBuffer << CONSOLE_COLOR_END " files)" CONSOLE_COLOR_FONT_YELLOW << tempTimeBuffer << "s" CONSOLE_COLOR_END ".." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
+    std::cout << CONSOLE_CLEAR_LINE "\r(" CONSOLE_COLOR_FONT_CYAN << tempFilesCountBuffer << CONSOLE_COLOR_END " files)" CONSOLE_COLOR_FONT_YELLOW << timeSpanBuf << CONSOLE_COLOR_END ".." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
     
     return new GFileTree(root);
 }
