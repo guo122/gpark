@@ -70,7 +70,6 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
     
     auto fileListSize = _fileList.size();
     char outputLog[1024];
-    // todo(gzy): now
     bool outputRunning = true;
     std::vector<bool *> calShaThreadRunningList;
     
@@ -119,18 +118,29 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
             calShaThreadRunningList.push_back(new bool);
         }
         
+        bool bForBigFileThread = sortList[0]->Stat().st_size > BIG_FILE_SIZE;
         int currentShorterIndex = 0;
         size_t currentShorterSize = totalNeedShaSize;
         for (int i = 0; i < sortList.size(); ++i)
         {
-            currentShorterIndex = 0;
-            currentShorterSize = totalNeedShaSize;
-            for (int j = 0; j < threadNum_; ++j)
+            if (bForBigFileThread && sortList[i]->Stat().st_size > BIG_FILE_SIZE)
             {
-                if (splitListSize[j] < currentShorterSize)
+                currentShorterIndex = 0;
+            }
+            else
+            {
+                currentShorterIndex = 1;
+            }
+            if (currentShorterIndex != 0)
+            {
+                currentShorterSize = totalNeedShaSize;
+                for (int j = bForBigFileThread; j < threadNum_; ++j)
                 {
-                    currentShorterSize = splitListSize[j];
-                    currentShorterIndex = j;
+                    if (splitListSize[j] < currentShorterSize)
+                    {
+                        currentShorterSize = splitListSize[j];
+                        currentShorterIndex = j;
+                    }
                 }
             }
             

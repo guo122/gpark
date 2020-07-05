@@ -8,51 +8,81 @@
 
 #include "GTools.h"
 
-void GTools::FormatFileSize(long long size_, char * str, const char * color_)
+void GTools::FormatNumber(const long long & num_, char * str_)
 {
-    if (size_ < STORAGE_KB)
+    char tempChar[30];
+    sprintf(tempChar, "%lld", num_);
+    int tempCharLen = strlen(tempChar);
+    int needAppend = 0;
+    if (tempCharLen > 3)
     {
-        sprintf(str, "%s%lld bytes" CONSOLE_COLOR_END, color_, size_);
-    }
-    else if (size_ < STORAGE_MB)
-    {
-        sprintf(str, "%s%.2f KB" CONSOLE_COLOR_END, color_, (double)size_ / (double)STORAGE_KB);
-    }
-    else if (size_ < STORAGE_GB)
-    {
-        sprintf(str, "%s%.2f MB" CONSOLE_COLOR_END, color_, (double)size_ / (double)STORAGE_MB);
-    }
-    else if (size_ < STORAGE_TB)
-    {
-        sprintf(str, "%s%.2f GB" CONSOLE_COLOR_END, color_, (double)size_ / (double)STORAGE_GB);
+        needAppend = (tempCharLen - 1) / 3;
+        for (int i = 0, tempI = tempCharLen - 1, strI = tempCharLen + needAppend - 1; tempI >= 0 && strI >= 0; --tempI, --strI)
+        {
+            str_[strI] = tempChar[tempI];
+            if (i == 2)
+            {
+                str_[--strI] = ',';
+                i = 0;
+            }
+            else
+            {
+                ++i;
+            }
+        }
     }
     else
     {
-        sprintf(str, "%s%.2f TB" CONSOLE_COLOR_END, color_, (double)size_ / (double)STORAGE_TB);
+        strcpy(str_, tempChar);
+    }
+    str_[tempCharLen + needAppend] = 0;
+}
+
+void GTools::FormatFileSize(const long long & size_, char * str_, const char * color_)
+{
+    if (size_ < STORAGE_KB)
+    {
+        sprintf(str_, "%s%lld bytes" CONSOLE_COLOR_END, color_, size_);
+    }
+    else if (size_ < STORAGE_MB)
+    {
+        sprintf(str_, "%s%.2f KB" CONSOLE_COLOR_END, color_, (double)size_ / (double)STORAGE_KB);
+    }
+    else if (size_ < STORAGE_GB)
+    {
+        sprintf(str_, "%s%.2f MB" CONSOLE_COLOR_END, color_, (double)size_ / (double)STORAGE_MB);
+    }
+    else if (size_ < STORAGE_TB)
+    {
+        sprintf(str_, "%s%.2f GB" CONSOLE_COLOR_END, color_, (double)size_ / (double)STORAGE_GB);
+    }
+    else
+    {
+        sprintf(str_, "%s%.2f TB" CONSOLE_COLOR_END, color_, (double)size_ / (double)STORAGE_TB);
     }
 }
 
-void GTools::FormatFileSize(long long size_, char * str)
+void GTools::FormatFileSize(const long long & size_, char * str_)
 {
     if (size_ < STORAGE_KB)
     {
-        sprintf(str, "%lld bytes", size_);
+        sprintf(str_, "%lld bytes", size_);
     }
     else if (size_ < STORAGE_MB)
     {
-        sprintf(str, "%.2f KB", (double)size_ / (double)STORAGE_KB);
+        sprintf(str_, "%.2f KB", (double)size_ / (double)STORAGE_KB);
     }
     else if (size_ < STORAGE_GB)
     {
-        sprintf(str, "%.2f MB", (double)size_ / (double)STORAGE_MB);
+        sprintf(str_, "%.2f MB", (double)size_ / (double)STORAGE_MB);
     }
     else if (size_ < STORAGE_TB)
     {
-        sprintf(str, "%.2f GB", (double)size_ / (double)STORAGE_GB);
+        sprintf(str_, "%.2f GB", (double)size_ / (double)STORAGE_GB);
     }
     else
     {
-        sprintf(str, "%.2f TB", (double)size_ / (double)STORAGE_TB);
+        sprintf(str_, "%.2f TB", (double)size_ / (double)STORAGE_TB);
     }
 }
 

@@ -13,3 +13,5 @@ echo "	cd Solution/make && make" >> Makefile
 echo "" >> Makefile
 echo "install:" >> Makefile
 echo "	install $bin_path \$(HOME)/bin" >> Makefile
+echo "clean:" >> Makefile
+echo "	rm -rf bin Solution Makefile .DS_Store" >> Makefile

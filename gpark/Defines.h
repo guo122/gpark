@@ -41,6 +41,8 @@
 #define STORAGE_GB          1073741824
 #define STORAGE_TB          1099511627776
 
+#define BIG_FILE_SIZE       524288000           // 500MB
+
 #define FORMAT_FILESIZE_BUFFER_LENGTH   50
 
 #define DB_OFFSET_LENGTH    8

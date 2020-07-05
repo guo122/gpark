@@ -45,6 +45,7 @@ namespace GThreadHelper
     void PrintLoadFolder(std::vector<std::list<GFile *> *> * splitFileLists, std::chrono::steady_clock::time_point * time_begin_, long * currentFileCount_, bool * running_)
     {
         char outputLog[1024];
+        char tempFilesCountBuffer[50];
         int threadNum = 1;
         while (*running_)
         {
@@ -59,7 +60,9 @@ namespace GThreadHelper
             std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
             std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time_end - (*time_begin_));
             
-            sprintf(outputLog, CONSOLE_CLEAR_LINE "\r[" CONSOLE_COLOR_FONT_PURPLE "%d" CONSOLE_COLOR_END "]loading %ld files." CONSOLE_COLOR_FONT_YELLOW "%.2fs" CONSOLE_COLOR_END, threadNum, *currentFileCount_, time_span.count());
+            GTools::FormatNumber(*currentFileCount_, tempFilesCountBuffer);
+            
+            sprintf(outputLog, CONSOLE_CLEAR_LINE "\r[" CONSOLE_COLOR_FONT_PURPLE "%d" CONSOLE_COLOR_END "]loading %s files." CONSOLE_COLOR_FONT_YELLOW "%.2fs" CONSOLE_COLOR_END, threadNum, tempFilesCountBuffer, time_span.count());
             std::cout << outputLog << std::flush;
             std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
