@@ -123,7 +123,7 @@ void GPark::DetectGParkPath()
 
 void GPark::Status(bool bMissignore, unsigned int threadNum_)
 {
-    _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath);
+    _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath, _GlobalHomePath);
     if (_savedFileTree)
     {
         GFileTree * nowFileTree = GFileMgr::LoadFromPath(_GlobalWorkPath, threadNum_);
@@ -149,7 +149,7 @@ void GPark::Tree(int depth, unsigned int threadNum_)
 
 void GPark::Show(bool bVerbose, int depth)
 {
-    _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath);
+    _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath, _GlobalHomePath);
     if (_savedFileTree)
     {
         std::string treeStr;
@@ -166,7 +166,7 @@ void GPark::Show(bool bVerbose, int depth)
 
 void GPark::Save(unsigned threadNum_)
 {
-    _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath);
+    _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath, _GlobalHomePath);
     if (_savedFileTree)
     {
         std::vector<GFile *> changesList, missList, addList;
@@ -214,10 +214,10 @@ void GPark::Save(unsigned threadNum_)
 
 void GPark::Diff(const char * otherRepos_)
 {
-    _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath);
+    _savedFileTree = GDBMgr::LoadDB(_GlobalHomePath, _GlobalHomePath);
     if (_savedFileTree)
      {
-         GFileTree * otherFileTree = GDBMgr::LoadDB(otherRepos_);
+         GFileTree * otherFileTree = GDBMgr::LoadDB(otherRepos_, _GlobalHomePath);
          
          if (otherFileTree == nullptr)
          {

@@ -9,18 +9,18 @@
 
 #include "GDBMgr.h"
 
-GFileTree * GDBMgr::LoadDB(const char * globalHomePath_)
+GFileTree * GDBMgr::LoadDB(const char * dbHomePath_, const char * globalHomePath_)
 {
     GFileTree * ret = nullptr;
     
     std::ifstream ifile;
-    std::string homePathStr = globalHomePath_;
-    ifile.open((homePathStr + "/" GPARK_PATH_DB).c_str(), std::ios::in | std::ios::binary);
+    std::string dbhomePathStr = dbHomePath_;
+    ifile.open((dbhomePathStr + "/" GPARK_PATH_DB).c_str(), std::ios::in | std::ios::binary);
     
     if (ifile.is_open())
     {
         struct stat dbStat;
-        stat((homePathStr + "/" GPARK_PATH_DB).c_str(), &dbStat);
+        stat((dbhomePathStr + "/" GPARK_PATH_DB).c_str(), &dbStat);
         
         if (dbStat.st_size > 0)
         {

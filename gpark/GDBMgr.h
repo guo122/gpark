@@ -15,7 +15,7 @@ class GDBMgr
      |version|,|This save Sha|,|The File offset|The File content|...loop...
      */
 public:
-    static GFileTree * LoadDB(const char * globalHomePath_);
+    static GFileTree * LoadDB(const char * dbHomePath_, const char * globalHomePath_);
     static void SaveDB(const char * globalHomePath_, GFileTree * fileTree_, unsigned threadNum_);
     
 public:
