@@ -18,9 +18,10 @@ namespace GThreadHelper
             std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
     }
-    void PrintCalShaSize(std::vector<bool *> * threadRunningList_, std::chrono::steady_clock::time_point * time_begin_, size_t * currentSize_, const char * totalSize_, bool * running_)
+    void PrintCalShaSize(std::vector<bool *> * threadRunningList_, std::chrono::steady_clock::time_point * time_begin_, size_t * currentSize_, const char * totalSize_,long * currentFileCount_, const char * totalFileCount_, bool * running_)
     {
         char sizeFormatBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
+        char fileCountBuf[50];
         char outputLog[1024];
         int threadNum = 1;
         while (*running_)
@@ -36,8 +37,9 @@ namespace GThreadHelper
             std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
             std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time_end - (*time_begin_));
             
-            GTools::FormatFileSize(*currentSize_, sizeFormatBuf, CONSOLE_COLOR_FONT_CYAN);
-            sprintf(outputLog, CONSOLE_CLEAR_LINE "\r[" CONSOLE_COLOR_FONT_PURPLE "%d" CONSOLE_COLOR_END "]cal sha (%s/%s)" CONSOLE_COLOR_FONT_YELLOW "%.2fs" CONSOLE_COLOR_END, threadNum, sizeFormatBuf, totalSize_, time_span.count());
+            GTools::FormatFileSize(*currentSize_, sizeFormatBuf, CONSOLE_COLOR_FONT_GREEN);
+            GTools::FormatNumber(*currentFileCount_, fileCountBuf);
+            sprintf(outputLog, CONSOLE_CLEAR_LINE "\r[" CONSOLE_COLOR_FONT_PURPLE "%d" CONSOLE_COLOR_END "]cal sha (%s/%s)(" CONSOLE_COLOR_FONT_CYAN "%s/%s" CONSOLE_COLOR_END ")" CONSOLE_COLOR_FONT_YELLOW "%.2fs" CONSOLE_COLOR_END, threadNum, sizeFormatBuf, totalSize_, fileCountBuf, totalFileCount_, time_span.count());
             std::cout << outputLog << std::flush;
             std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
@@ -146,13 +148,14 @@ namespace GThreadHelper
         }
     }
 
-    void FileListCalSha(std::vector<GFile *> * fileList_, size_t * calculatingSize_, bool * bRunning_)
+    void FileListCalSha(std::vector<GFile *> * fileList_, long * fileCount_, size_t * calculatingSize_, bool * bRunning_)
     {
         for (int i = 0; i < fileList_->size(); ++i)
         {
             (*bRunning_) = true;
             (*fileList_)[i]->CalSha();
             (*calculatingSize_) += (*fileList_)[i]->Stat().st_size;
+            (*fileCount_) += 1;
         }
         (*bRunning_) = false;
     }

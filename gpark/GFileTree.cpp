@@ -73,6 +73,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
     bool outputRunning = true;
     std::vector<bool *> calShaThreadRunningList;
     
+    long currentFileCount = 0;
     size_t currentCalShaSize = 0;
     size_t totalNeedShaSize = 0;
     std::vector<GFile *> sortList;
@@ -95,8 +96,10 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
     std::vector<std::thread *> threadList;
     
     outputRunning = true;
+    char totalFileCountBuf[50];
+    GTools::FormatNumber(sortList.size(), totalFileCountBuf);
     GTools::FormatFileSize(totalNeedShaSize, outputLog, CONSOLE_COLOR_FONT_CYAN);
-    std::thread calShaLogThread(GThreadHelper::PrintCalShaSize, &calShaThreadRunningList, &time_begin, &currentCalShaSize, outputLog, &outputRunning);
+    std::thread calShaLogThread(GThreadHelper::PrintCalShaSize, &calShaThreadRunningList, &time_begin, &currentCalShaSize, outputLog, &currentFileCount,totalFileCountBuf, &outputRunning);
     if (threadNum_ > 1 && sortList.size() > 1)
     {
         if (threadNum_ > sortList.size())
@@ -150,7 +153,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
         
         for (int i = 0; i < threadNum_; ++i)
         {
-            splitThread = new std::thread(GThreadHelper::FileListCalSha, splitFileLists[i], &currentCalShaSize, calShaThreadRunningList[i]);
+            splitThread = new std::thread(GThreadHelper::FileListCalSha, splitFileLists[i], &currentFileCount, &currentCalShaSize, calShaThreadRunningList[i]);
             threadList.push_back(splitThread);
         }
         
@@ -169,7 +172,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
     else
     {
         calShaThreadRunningList.push_back(new bool);
-        GThreadHelper::FileListCalSha(&sortList, &currentCalShaSize, calShaThreadRunningList[0]);
+        GThreadHelper::FileListCalSha(&sortList, &currentFileCount, &currentCalShaSize, calShaThreadRunningList[0]);
         delete calShaThreadRunningList[0];
     }
     outputRunning = false;
