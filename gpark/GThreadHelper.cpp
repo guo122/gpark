@@ -158,7 +158,7 @@ namespace GThreadHelper
         {
             (*bRunning_) = true;
             (*fileList_)[i]->CalSha();
-            (*calculatingSize_) += (*fileList_)[i]->Stat().st_size;
+            (*calculatingSize_) += (*fileList_)[i]->FileSize();
             (*fileCount_) += 1;
         }
         (*bRunning_) = false;

@@ -109,7 +109,7 @@ std::string GTools::FormatShaToHex(unsigned char * sha_)
 {
     std::string ret;
     char tempChar[3];
-    for (int i = 0; i < SHA_CHAR_LENGTH; i++) {
+    for (int i = 0; i < SHA1_DIGEST_LENGTH; i++) {
         sprintf(tempChar, "%02x", sha_[i]);
         ret += tempChar;
     }

@@ -52,19 +52,19 @@ const std::vector<GFile*> & GFileTree::GetFileList()
     return _fileList;
 }
 
-size_t GFileTree::CheckSize()
+size_t GFileTree::CheckBinLength()
 {
     size_t ret = 0;
     
     for (int i = 1; i < _fileList.size(); ++i)
     {
-        ret += _fileList[i]->SaveSize() + DB_OFFSET_LENGTH;
+        ret += _fileList[i]->CheckBinLength();
     }
     
     return ret;
 }
 
-void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
+void GFileTree::ToBin(char * buffer_, char * digestBuffer_, unsigned int threadNum_)
 {
     std::chrono::steady_clock::time_point time_begin = std::chrono::steady_clock::now();
     
@@ -82,15 +82,15 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
     {
         if (_fileList[i]->IsNeedCalSha())
         {
-            totalNeedShaSize += _fileList[i]->Stat().st_size;
+            totalNeedShaSize += _fileList[i]->FileSize();
             sortList.push_back(_fileList[i]);
         }
     }
     std::sort(sortList.begin(), sortList.end(), [](GFile * & x, GFile * & y){
         if (x->IsNeedCalSha() && !y->IsNeedCalSha()) return true;
         else if (!x->IsNeedCalSha() && y->IsNeedCalSha()) return false;
-        else if (x->Stat().st_size > y->Stat().st_size) return true;
-        else if (x->Stat().st_size < y->Stat().st_size) return false;
+        else if (x->FileSize() > y->FileSize()) return true;
+        else if (x->FileSize() < y->FileSize()) return false;
         else return false;
     });
     std::vector<std::thread *> threadList;
@@ -121,12 +121,12 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
             calShaThreadRunningList.push_back(new bool);
         }
         
-        bool bForBigFileThread = sortList[0]->Stat().st_size > BIG_FILE_SIZE;
+        bool bForBigFileThread = sortList[0]->FileSize() > BIG_FILE_SIZE;
         int currentShorterIndex = 0;
         size_t currentShorterSize = totalNeedShaSize;
         for (int i = 0; i < sortList.size(); ++i)
         {
-            if (bForBigFileThread && sortList[i]->Stat().st_size > BIG_FILE_SIZE)
+            if (bForBigFileThread && sortList[i]->FileSize() > BIG_FILE_SIZE)
             {
                 currentShorterIndex = 0;
             }
@@ -148,7 +148,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
             }
             
             splitFileLists[currentShorterIndex]->push_back(sortList[i]);
-            splitListSize[currentShorterIndex] += sortList[i]->Stat().st_size;
+            splitListSize[currentShorterIndex] += sortList[i]->FileSize();
         }
         
         for (int i = 0; i < threadNum_; ++i)
@@ -191,8 +191,7 @@ void GFileTree::ToBin(char * data_, char * totalSha_, unsigned int threadNum_)
     for (int i = 1; i < fileListSize; ++i)
     {
         sprintf(outputLog, CONSOLE_CLEAR_LINE "\rto bin (" CONSOLE_COLOR_FONT_CYAN "%d/%ld" CONSOLE_COLOR_END ")", i, fileListSize - 1);
-        offset += _fileList[i]->ToBin(data_, offset);
-        memcpy(totalSha_ + ((i - 1) * SHA_CHAR_LENGTH), _fileList[i]->Sha(), SHA_CHAR_LENGTH);
+        offset += _fileList[i]->ToBin(buffer_ + offset, digestBuffer_ + offset);
     }
     outputRunning = false;
     toBinLogThread.join();

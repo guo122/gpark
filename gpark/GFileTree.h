@@ -22,8 +22,8 @@ public:
     const std::vector<GFile*> & GetFileList();
     
 public:
-    size_t CheckSize();
-    void ToBin(char * data_, char * totalSha_, unsigned int threadNum_);
+    size_t CheckBinLength();
+    void ToBin(char * buffer_, char * digestBuffer_, unsigned int threadNum_);
     
 public:
     void Refresh(bool bRefreshID);

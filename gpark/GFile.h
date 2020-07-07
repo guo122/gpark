@@ -3,7 +3,6 @@
 #define _GFILE_H_
 
 #include <vector>
-#include <sys/stat.h>
 
 #include "Defines.h"
 
@@ -15,14 +14,20 @@ class GFile
 {
     friend GFileTree;
 public:
-    GFile(char * data_, size_t size_, long & parent_id_);
+    GFile();
     GFile(GFile * parent_, const char * globalFullPath_, struct dirent * dirent_, long id_ = -1);
     ~GFile();
+      
+public:
+    size_t FromBin(char * data_, char * digestBuffer_, long * parent_id_);
+    size_t ToBin(char * buffer_, char * digestBuffer_);
+    size_t CheckBinLength();
     
 public:
     long Id();
     GFile * Parent();
-    struct stat & Stat();
+    const size_t & FileSize();
+    const long & MTimestamp();
     const char * CurrentPath();
     const char * GlobalFullPath();
     const char * Name();
@@ -45,9 +50,6 @@ public:
     void CalShaPreInfo(char * outputLog);
     void CalSha();
     std::string ToString(bool bVerbose);
-    size_t ToBin(char * data_, size_t offset_);
-    
-    size_t SaveSize();
     
 private:
     void ReGenerateID();
@@ -58,13 +60,13 @@ private:
     GFile *             _parent;
     std::vector<GFile*> _children;
     
-    struct stat     _stat;
-    
     char *          _globalFullPath;
     char *          _name;
     bool            _bGenShaed;
     bool            _bFolder;
-    unsigned char   _sha[SHA_CHAR_LENGTH];
+    size_t          _fileSize;
+    long            _mTimestamp;
+    unsigned char   _sha[SHA1_DIGEST_LENGTH];
     
 private:
     static long _id_automatic_inc;

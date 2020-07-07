@@ -1,6 +1,7 @@
 
 #include <fstream>
 #include <dirent.h>
+#include <sys/stat.h>
 
 #include "GTools.h"
 #include "GPark.h"
@@ -11,43 +12,16 @@
 
 long GFile::_id_automatic_inc = 0;
 
-GFile::GFile(char * data_, size_t size_, long & parent_id_)
+GFile::GFile()
     : _id(0)
     , _parent(nullptr)
     , _globalFullPath(nullptr)
     , _name(nullptr)
-    , _bGenShaed(true)
+    , _bGenShaed(false)
     , _bFolder(false)
+    , _fileSize(0)
+    , _mTimestamp(0)
 {
-    size_t nameLength = size_ - SaveSize() - DB_OFFSET_LENGTH;
-    char * buffer = new char[size_];
-    
-    data_ += DB_OFFSET_LENGTH;
-    
-    memcpy(buffer, data_, sizeof(long));
-    data_ += sizeof(long);
-    _id = *((long*)buffer);
-    
-    memcpy(buffer, data_, sizeof(long));
-    data_ += sizeof(long);
-    parent_id_ = *((long*)buffer);
-    
-    memcpy(buffer, data_, sizeof(struct stat));
-    data_ += sizeof(struct stat);
-    _stat = *((struct stat*)buffer);
-    _bFolder = S_ISDIR(_stat.st_mode);
-    
-    memcpy(buffer, data_, nameLength + 1);
-    data_ += nameLength + 1;
-    _name = new char[nameLength + 1];
-    strncpy(_name, buffer, nameLength);
-    _name[nameLength] = 0;
-    
-    memcpy(buffer, data_, SHA_CHAR_LENGTH);
-    data_ += SHA_CHAR_LENGTH;
-    memcpy(_sha, buffer, SHA_CHAR_LENGTH);
-    
-    delete [] buffer;
 }
 
 GFile::GFile(GFile * parent_, const char * globalFullPath_, struct dirent * dirent_, long id_)
@@ -57,8 +31,10 @@ GFile::GFile(GFile * parent_, const char * globalFullPath_, struct dirent * dire
     , _name(nullptr)
     , _bGenShaed(false)
     , _bFolder(false)
+    , _fileSize(0)
+    , _mTimestamp(0)
 {
-    memset(_sha, 0, SHA_CHAR_LENGTH);
+    memset(_sha, 0, SHA1_DIGEST_LENGTH);
     
     if (_id == -1)
     {
@@ -71,8 +47,12 @@ GFile::GFile(GFile * parent_, const char * globalFullPath_, struct dirent * dire
         strncpy(_name, dirent_->d_name, dirent_->d_namlen);
         _name[dirent_->d_namlen] = 0;
     }
-    stat(_globalFullPath, &_stat);
-    _bFolder = S_ISDIR(_stat.st_mode);
+    
+    struct stat tempStat;
+    stat(_globalFullPath, &tempStat);
+    _bFolder = S_ISDIR(tempStat.st_mode);
+    _fileSize = tempStat.st_size;
+    _mTimestamp = tempStat.st_mtimespec.tv_sec;
 }
 
 GFile::~GFile()
@@ -81,6 +61,153 @@ GFile::~GFile()
     {
         delete [] _name;
     }
+}
+
+size_t GFile::FromBin(char * data_, char * digestBuffer_, long * parent_id_)
+{
+    char * digestData = data_;
+    char * buffer = new char[FILE_FILESIZE_LENGTH];
+    
+    // len, id, parent_id, isFolder, fileSize, mtime, sha1, nameSize, (name)
+    memcpy(buffer, data_, FILE_FILESIZE_LENGTH);
+    data_ += FILE_FILESIZE_LENGTH;
+    size_t ret = *((size_t*)buffer);
+    // id
+    memcpy(buffer, data_, FILE_ID_LENGTH);
+    data_ += FILE_ID_LENGTH;
+    _id = *((long*)buffer);
+    // parent_id
+    memcpy(buffer, data_, FILE_ID_LENGTH);
+    data_ += FILE_ID_LENGTH;
+    *parent_id_ = *((long*)buffer);
+    // isFolder
+    memcpy(buffer, data_, FILE_BOOL_LENGTH);
+    data_ += FILE_BOOL_LENGTH;
+    _bFolder = *((bool*)buffer);
+    // fileSize
+    memcpy(buffer, data_, FILE_FILESIZE_LENGTH);
+    data_ += FILE_FILESIZE_LENGTH;
+    _fileSize = *((size_t*)buffer);
+    // mTime
+    memcpy(buffer, data_, FILE_MTIME_LENGTH);
+    data_ += FILE_MTIME_LENGTH;
+    _mTimestamp = *((long*)buffer);
+    // sha1
+    memcpy(_sha, data_, SHA1_DIGEST_LENGTH);
+    data_ += SHA1_DIGEST_LENGTH;
+    // nameSize
+    memcpy(buffer, data_, FILE_NAMESIZE_LENGTH);
+    data_ += FILE_NAMESIZE_LENGTH;
+    int nameSize = *((int*)buffer);
+    // name
+    _name = new char[nameSize + 1];
+    memcpy(_name, data_, nameSize);
+    data_ += nameSize;
+    _name[nameSize] = 0;
+    
+    delete [] buffer;
+    _bGenShaed = true;
+    
+    // len,          // id, parent_id
+    memcpy(digestBuffer_, digestData, FILE_FILESIZE_LENGTH);
+    digestBuffer_ += FILE_FILESIZE_LENGTH;
+    digestData += FILE_FILESIZE_LENGTH + FILE_ID_LENGTH + FILE_ID_LENGTH;
+    // isFolder
+    memcpy(digestBuffer_, digestData, FILE_BOOL_LENGTH);
+    digestBuffer_ += FILE_BOOL_LENGTH;
+    digestData += FILE_BOOL_LENGTH;
+    // fileSize,        // mtime
+    memcpy(digestBuffer_, digestData, FILE_FILESIZE_LENGTH);
+    digestBuffer_ += FILE_FILESIZE_LENGTH;
+    digestData += FILE_FILESIZE_LENGTH + FILE_MTIME_LENGTH;
+    // sha1
+    memcpy(digestBuffer_, digestData, SHA1_DIGEST_LENGTH);
+    digestBuffer_ += SHA1_DIGEST_LENGTH;
+    digestData += SHA1_DIGEST_LENGTH;
+    // namesize
+    memcpy(digestBuffer_, digestData, FILE_NAMESIZE_LENGTH);
+    digestBuffer_ += FILE_NAMESIZE_LENGTH;
+    digestData += FILE_NAMESIZE_LENGTH;
+    // name
+    memcpy(digestBuffer_, digestData, nameSize);
+    digestBuffer_ += nameSize;
+    digestData += nameSize;
+    
+    return ret;
+}
+
+size_t GFile::ToBin(char * buffer_, char * digestBuffer_)
+{
+    // len, id, parent_id, isFolder, fileSize, mtime, sha1, nameSize, (name)
+    size_t ret = CheckBinLength();
+    
+    size_t nameSize = 0;
+    if (_name != nullptr)
+    {
+        nameSize = strlen(_name);
+    }
+    
+    // len
+    memcpy(buffer_, (char *)&ret, FILE_FILESIZE_LENGTH);
+    buffer_ += FILE_FILESIZE_LENGTH;
+    // id
+    memcpy(buffer_, (char *)&_id, FILE_ID_LENGTH);
+    buffer_ += FILE_ID_LENGTH;
+    // parent_id
+    memcpy(buffer_, (char *)&(_parent->_id), FILE_ID_LENGTH);
+    buffer_ += FILE_ID_LENGTH;
+    // isFolder
+    memcpy(buffer_, (char *)&(_bFolder), FILE_BOOL_LENGTH);
+    buffer_ += FILE_BOOL_LENGTH;
+    // fileSize
+    memcpy(buffer_, (char *)&(_fileSize), FILE_FILESIZE_LENGTH);
+    buffer_ += FILE_FILESIZE_LENGTH;
+    // mtime
+    memcpy(buffer_, (char *)&(_mTimestamp), FILE_MTIME_LENGTH);
+    buffer_ += FILE_MTIME_LENGTH;
+    // sha1
+    memcpy(buffer_, Sha(), SHA1_DIGEST_LENGTH);
+    buffer_ += SHA1_DIGEST_LENGTH;
+    // namesize
+    memcpy(buffer_, (char *)&nameSize, FILE_NAMESIZE_LENGTH);
+    buffer_ += FILE_NAMESIZE_LENGTH;
+    // name
+    memcpy(buffer_, _name, nameSize);
+    buffer_ += nameSize;
+    
+    // len
+    memcpy(digestBuffer_, (char *)&ret, FILE_FILESIZE_LENGTH);
+    digestBuffer_ += FILE_FILESIZE_LENGTH;
+    // isFolder
+    memcpy(digestBuffer_, (char *)&(_bFolder), FILE_BOOL_LENGTH);
+    digestBuffer_ += FILE_BOOL_LENGTH;
+    // fileSize
+    memcpy(digestBuffer_, (char *)&(_fileSize), FILE_FILESIZE_LENGTH);
+    digestBuffer_ += FILE_FILESIZE_LENGTH;
+    // sha1
+    memcpy(digestBuffer_, Sha(), SHA1_DIGEST_LENGTH);
+    digestBuffer_ += SHA1_DIGEST_LENGTH;
+    // namesize
+    memcpy(digestBuffer_, (char *)&nameSize, FILE_NAMESIZE_LENGTH);
+    digestBuffer_ += FILE_NAMESIZE_LENGTH;
+    // name
+    memcpy(digestBuffer_, _name, nameSize);
+    digestBuffer_ += nameSize;
+    
+    return ret;
+}
+
+size_t GFile::CheckBinLength()
+{
+    size_t ret = 0;
+    if (_name != nullptr)
+    {
+        ret = strlen(_name);
+    }
+    // len, id, parent_id, fileSize, mtime, sha1, nameSize, (name)
+    ret += FILE_BASIC_LENGTH;
+    
+    return ret;
 }
 
 long GFile::Id()
@@ -92,9 +219,13 @@ GFile * GFile::Parent()
 {
     return _parent;
 }
-struct stat & GFile::Stat()
+const size_t & GFile::FileSize()
 {
-    return _stat;
+    return _fileSize;
+}
+const long & GFile::MTimestamp()
+{
+    return _mTimestamp;
 }
 const char * GFile::CurrentPath()
 {
@@ -141,9 +272,10 @@ void GFile::SetParent(GFile * parent_)
 void GFile::CopyFrom(GFile * file_)
 {
     _bGenShaed = file_->_bGenShaed;
-    memcpy(_sha, file_->Sha(), SHA_CHAR_LENGTH);
-    _stat = file_->Stat();
-    _bFolder = S_ISDIR(_stat.st_mode);
+    memcpy(_sha, file_->Sha(), SHA1_DIGEST_LENGTH);
+    _bFolder = file_->IsFolder();
+    _fileSize = file_->FileSize();
+    _mTimestamp = file_->MTimestamp();
 }
 
 void GFile::GenFullPath()
@@ -175,19 +307,19 @@ bool GFile::IsSamePath(GFile * file_)
 bool GFile::IsDifferent(GFile * file_)
 {
     bool ret = false;
-    if (file_->Stat().st_size != _stat.st_size)
+    if (file_->FileSize() != _fileSize)
     {
         ret = true;
     }
-    else if (file_->Stat().st_mtimespec.tv_sec != _stat.st_mtimespec.tv_sec)
+    else if (file_->MTimestamp() != _mTimestamp)
     {
-        if (memcmp(file_->Sha(), Sha(), SHA_CHAR_LENGTH) != 0)
+        if (memcmp(file_->Sha(), Sha(), SHA1_DIGEST_LENGTH) != 0)
         {
             ret = true;
         }
         else
         {
-            _stat = file_->Stat();
+            _mTimestamp = file_->MTimestamp();
         }
     }
     return ret;
@@ -230,7 +362,7 @@ bool GFile::IsNeedCalSha()
 void GFile::CalShaPreInfo(char * outputLog)
 {
     char tempChar[FORMAT_FILESIZE_BUFFER_LENGTH];
-    GTools::FormatFileSize(_stat.st_size, tempChar, CONSOLE_COLOR_FONT_CYAN);
+    GTools::FormatFileSize(_fileSize, tempChar, CONSOLE_COLOR_FONT_CYAN);
     sprintf(outputLog, CONSOLE_CLEAR_LINE "\rcal sha(%s)", tempChar);
 }
 
@@ -244,11 +376,11 @@ void GFile::CalSha()
         
         std::ifstream ifile;
         ifile.open(_globalFullPath, std::ios::in | std::ios::binary);
-        char * buffer = new char[_stat.st_size];
-        ifile.read(buffer, _stat.st_size);
+        char * buffer = new char[_fileSize];
+        ifile.read(buffer, _fileSize);
         ifile.close();
 
-        GTools::CalculateSHA1(buffer, _stat.st_size, _sha);
+        GTools::CalculateSHA1(buffer, _fileSize, _sha);
         
         delete[] buffer;
     }
@@ -256,7 +388,7 @@ void GFile::CalSha()
 
 std::string GFile::ToString(bool bVerbose)
 {
-    SaveSize();
+    CheckBinLength();
     
     char tempChar[300];
     if (IsFolder())
@@ -266,7 +398,7 @@ std::string GFile::ToString(bool bVerbose)
     else
     {
         char sizeBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
-        GTools::FormatFileSize(_stat.st_size, sizeBuf);
+        GTools::FormatFileSize(_fileSize, sizeBuf);
         
         if (bVerbose)
         {
@@ -280,51 +412,6 @@ std::string GFile::ToString(bool bVerbose)
     
     return tempChar;
 }
-
-size_t GFile::ToBin(char * data_, size_t offset_)
-{
-    size_t ret = SaveSize();
-    char * cur = data_ + offset_;
-    
-    // size
-    memcpy(cur, (char *)&ret, DB_OFFSET_LENGTH);
-    cur += DB_OFFSET_LENGTH;
-    
-    // id
-    memcpy(cur, (char *)&_id, sizeof(long));
-    cur += sizeof(long);
-    
-    // parent_id
-    memcpy(cur, (char *)&_parent->_id, sizeof(long));
-    cur += sizeof(long);
-    
-    // stat
-    memcpy(cur, (char *)&_stat, sizeof(struct stat));
-    cur += sizeof(struct stat);
-    
-    // name
-    memcpy(cur, _name, strlen(_name) + 1);
-    cur += strlen(_name) + 1;
-    
-    // sha
-    memcpy(cur, Sha(), SHA_CHAR_LENGTH);
-    
-    return ret + DB_OFFSET_LENGTH;
-}
-
-size_t GFile::SaveSize()
-{
-    size_t nameLength = 0;
-    if (_name != nullptr)
-    {
-        nameLength = strlen(_name);
-    }
-    // id, parent_id, stat, name, sha;
-    size_t ret = sizeof(long) + sizeof(long) + sizeof(struct stat) + nameLength + 1 + SHA_CHAR_LENGTH;
-    
-    return ret;
-}
-
 
 void GFile::ReGenerateID()
 {

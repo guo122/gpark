@@ -30,7 +30,7 @@ GFileTree * GDBMgr::LoadDB(const char * dbHomePath_, const char * globalHomePath
             char dbVersion = CheckDBVersion(readBuffer);
             if (dbVersion == DB_VERSION)
             {
-                ret = LoadDBV1(globalHomePath_, readBuffer, dbStat);
+                ret = LoadDB_Impl(globalHomePath_, readBuffer, dbStat);
             }
             else
             {
@@ -49,11 +49,7 @@ GFileTree * GDBMgr::LoadDB(const char * dbHomePath_, const char * globalHomePath
 
 void GDBMgr::SaveDB(const char * globalHomePath_, GFileTree * fileTree_, unsigned threadNum_)
 {
-#if DB_VERSION == DB_VERSION_V1
-    SaveDBV1(globalHomePath_, fileTree_, threadNum_);
-#else
-    GAssert(false, "this db version not support.";)
-#endif
+    SaveDB_Impl(globalHomePath_, fileTree_, threadNum_);
 }
 
 char GDBMgr::CheckDBVersion(char * dbBuffer_)
@@ -63,16 +59,7 @@ char GDBMgr::CheckDBVersion(char * dbBuffer_)
     return ret;
 }
 
-void GDBMgr::VersionConvert(char oriDBVerion,
-                              char * oriDBBuffer_,
-                              size_t oriSize_,
-                              char * dstDBBuffer_,
-                              char dstDBVersion,
-                              size_t & dstSize_)
-{
-}
-
-GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, struct stat & dbStat_)
+GFileTree * GDBMgr::LoadDB_Impl(const char * globalHomePath_, char * dbBuffer_, struct stat & dbStat_)
 {
     std::chrono::steady_clock::time_point time_begin = std::chrono::steady_clock::now();
     
@@ -80,16 +67,19 @@ GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, str
     GFile * parent = nullptr;
     GFile * cur = nullptr;
     long parent_id = -122;
-    unsigned char dbSha[SHA_CHAR_LENGTH];
+    unsigned char dbSavedSha[SHA1_DIGEST_LENGTH];
+    unsigned char dbNowSha[SHA1_DIGEST_LENGTH];
     
     std::map<long, GFile*> gfileMap;
     std::map<long, GFile*>::iterator it;
     
-    size_t offset = 1 + SHA_CHAR_LENGTH, size = 0;
+    char * digestBuffer = new char[dbStat_.st_size];
+    memset(digestBuffer, 0, dbStat_.st_size);
+    size_t offset = 1 + SHA1_DIGEST_LENGTH;
     
-    memcpy(dbSha, dbBuffer_ + 1, SHA_CHAR_LENGTH);
+    memcpy(dbSavedSha, dbBuffer_ + 1, SHA1_DIGEST_LENGTH);
     
-    std::cout << "loading...DB(" CONSOLE_COLOR_FONT_CYAN << GTools::FormatShaToHex(dbSha) << CONSOLE_COLOR_END ")" CONSOLE_COLOR_FONT_YELLOW << GTools::FormatTimestampToYYMMDD_HHMMSS(dbStat_.st_mtimespec.tv_sec) << CONSOLE_COLOR_END << std::endl;
+    std::cout << "loading...DB(" CONSOLE_COLOR_FONT_CYAN << GTools::FormatShaToHex(dbSavedSha) << CONSOLE_COLOR_END ")" CONSOLE_COLOR_FONT_YELLOW << GTools::FormatTimestampToYYMMDD_HHMMSS(dbStat_.st_mtimespec.tv_sec) << CONSOLE_COLOR_END << std::endl;
     
     char offsetFormatBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
     char sizeFormatBuf[FORMAT_FILESIZE_BUFFER_LENGTH];
@@ -111,9 +101,8 @@ GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, str
         GTools::FormatTimeduration(time_span.count(), timeSpanBuf);
         sprintf(outputBuf, CONSOLE_CLEAR_LINE "\r(%s/%s)" CONSOLE_COLOR_FONT_YELLOW "%s" CONSOLE_COLOR_END, offsetFormatBuf, sizeFormatBuf, timeSpanBuf);
         
-        size = *((size_t*)(dbBuffer_ + offset)) + DB_OFFSET_LENGTH;
-
-        cur = new GFile(dbBuffer_ + offset, size, parent_id);
+        cur = new GFile();
+        offset += cur->FromBin(dbBuffer_ + offset, digestBuffer + offset, &parent_id);
         if (root == nullptr)
         {
             root = new GFile(nullptr, globalHomePath_, nullptr, parent_id);
@@ -131,49 +120,57 @@ GFileTree * GDBMgr::LoadDBV1(const char * globalHomePath_, char * dbBuffer_, str
         GAssert(it == gfileMap.end(), "same id %ld (%s)", cur->Id(), cur->GlobalFullPath());
         
         gfileMap.insert(std::pair<long, GFile*>(cur->Id(), cur));
-        
-        offset += size;
     }
     outputRunning = false;
     outputThread.join();
+    
+    GTools::CalculateSHA1(digestBuffer, dbStat_.st_size, dbNowSha);
     
     time_end = std::chrono::steady_clock::now();
     time_span = std::chrono::duration_cast<std::chrono::duration<double>>(time_end - time_begin);
     
     GTools::FormatTimeduration(time_span.count(), timeSpanBuf);
     
-    std::cout << CONSOLE_CLEAR_LINE "\r(" << sizeFormatBuf << ")" CONSOLE_COLOR_FONT_YELLOW << timeSpanBuf << CONSOLE_COLOR_END ".." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
+    if (memcmp(dbSavedSha, dbNowSha, SHA1_DIGEST_LENGTH) == 0)
+    {
+        std::cout << CONSOLE_CLEAR_LINE "\r(" << sizeFormatBuf << ")" CONSOLE_COLOR_FONT_YELLOW << timeSpanBuf << CONSOLE_COLOR_END ".." CONSOLE_COLOR_FONT_GREEN "done" CONSOLE_COLOR_END << std::endl;
+    }
+    else
+    {
+        std::cout << CONSOLE_CLEAR_LINE "\r(" << sizeFormatBuf << ")" CONSOLE_COLOR_FONT_YELLOW << timeSpanBuf << CONSOLE_COLOR_END ".." CONSOLE_COLOR_FONT_RED "Incorrect data." CONSOLE_COLOR_END << std::endl;
+    }
+    
+    delete [] digestBuffer;
     
     return new GFileTree(root);
 }
 
-void GDBMgr::SaveDBV1(const char * globalHomePath_, GFileTree * fileTree_, unsigned threadNum_)
+void GDBMgr::SaveDB_Impl(const char * globalHomePath_, GFileTree * fileTree_, unsigned threadNum_)
 {
-    char dbVersion = 1;
-    std::ofstream ofile;
+    char dbVersion = DB_VERSION;
     std::string homePathStr = globalHomePath_;
 
     fileTree_->Refresh(true);
-    size_t size = fileTree_->CheckSize() + SHA_CHAR_LENGTH + 1;
-
-    char * writeBuffer = new char[size];
+    size_t totalLength = fileTree_->CheckBinLength() + SHA1_DIGEST_LENGTH + 1;
+    
+    char * writeBuffer = new char[totalLength];
+    char * digestBuffer = new char[totalLength];
+    memset(digestBuffer, 0, totalLength);
     memcpy(writeBuffer, &dbVersion, 1);
     
-    size_t totalShaBufferLength = (fileTree_->GetFileList().size() - 1) * SHA_CHAR_LENGTH;
-    char * totalShaBuffer = new char [totalShaBufferLength];
-    fileTree_->ToBin(writeBuffer + 1 + SHA_CHAR_LENGTH, totalShaBuffer, threadNum_);
+    fileTree_->ToBin(writeBuffer + 1 + SHA1_DIGEST_LENGTH, digestBuffer + 1 + SHA1_DIGEST_LENGTH, threadNum_);
     
-    unsigned char dbSha[SHA_CHAR_LENGTH];
-    GTools::CalculateSHA1(totalShaBuffer, totalShaBufferLength, dbSha);
+    unsigned char dbSha[SHA1_DIGEST_LENGTH];
+    GTools::CalculateSHA1(digestBuffer, totalLength, dbSha);
     
-    memcpy(writeBuffer + 1, dbSha, SHA_CHAR_LENGTH);
+    memcpy(writeBuffer + 1, dbSha, SHA1_DIGEST_LENGTH);
     
+    std::ofstream ofile;
     ofile.open((homePathStr + "/" GPARK_PATH_DB).c_str(), std::ios::out | std::ios::binary);
-    ofile.write(writeBuffer, size);
+    ofile.write(writeBuffer, totalLength);
     ofile.close();
     
     delete [] writeBuffer;
-    delete [] totalShaBuffer;
 }
 
 GDBMgr::GDBMgr()

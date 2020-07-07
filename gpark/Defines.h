@@ -45,13 +45,20 @@
 
 #define FORMAT_FILESIZE_BUFFER_LENGTH   50
 
-#define DB_OFFSET_LENGTH    8
-
-#define SHA_CHAR_LENGTH     20
-
 #define FULLPATH_DEFAULT_BUFFER_LENGTH      1024
 
+#define FILE_BOOL_LENGTH        1
+#define FILE_ID_LENGTH          8
+#define FILE_FILESIZE_LENGTH    8
+#define FILE_MTIME_LENGTH       8
+#define SHA1_DIGEST_LENGTH     20
+#define FILE_NAMESIZE_LENGTH    4
+
+// len, id, parent_id, isFolder, fileSize, mtime, sha1, nameSize, (name)
+#define FILE_BASIC_LENGTH       FILE_FILESIZE_LENGTH + FILE_ID_LENGTH + FILE_ID_LENGTH + FILE_BOOL_LENGTH + FILE_FILESIZE_LENGTH + FILE_MTIME_LENGTH + SHA1_DIGEST_LENGTH + FILE_NAMESIZE_LENGTH
+
 #define DB_VERSION_V1               1
+#define DB_VERSION_V2               2
 
 #define GAssert(expression, format, ...) \
 if (!(expression)) { \

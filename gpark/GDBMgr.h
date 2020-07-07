@@ -20,18 +20,10 @@ public:
     
 public:
     static char CheckDBVersion(char * dbBuffer_);
-    static void VersionConvert(char oriDBVerion,
-                               char * oriDBBuffer_,
-                               size_t oriSize_,
-                               char * dstDBBuffer_,
-                               char dstDBVersion,
-                               size_t & dstSize_);
     
 private:
-    static GFileTree * LoadDBV1(const char * globalHomePath_, char * dbBuffer_, struct stat & dbStat_);
-    
-private:
-    static void SaveDBV1(const char * globalHomePath_, GFileTree * fileTree_, unsigned threadNum_);
+    static GFileTree * LoadDB_Impl(const char * globalHomePath_, char * dbBuffer_, struct stat & dbStat_);
+    static void SaveDB_Impl(const char * globalHomePath_, GFileTree * fileTree_, unsigned threadNum_);
     
 private:
     GDBMgr();
