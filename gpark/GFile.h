@@ -39,7 +39,6 @@ public:
     void SetParent(GFile * parent_);
     void CopyFrom(GFile * file_);
     void GenFullPath();
-    bool RefreshFileSize(); // return is file change.
     void AppendChild(GFile * child_);
     void RemoveChild(GFile * child_, bool bRemoveAllChildren = false);
     bool IsSamePath(GFile * file_);

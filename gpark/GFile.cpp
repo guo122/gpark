@@ -62,14 +62,13 @@ GFile::GFile(GFile * parent_, const char * globalFullPath_, struct dirent * dire
         else if (dirent_->d_type == DT_REG)
         {
             _bFile = true;
+            
+            struct stat tempStat;
+            stat(_globalFullPath, &tempStat);
+            _fileSize = tempStat.st_size;
+            _mTimestamp = tempStat.st_mtimespec.tv_sec;
         }
     }
-    
-    struct stat tempStat;
-    stat(_globalFullPath, &tempStat);
-    _fileSize = tempStat.st_size;
-    _mTimestamp = tempStat.st_mtimespec.tv_sec;
-
 //    S_ISDIR(tempStat.st_mode)
 }
 
@@ -328,21 +327,6 @@ void GFile::CopyFrom(GFile * file_)
 void GFile::GenFullPath()
 {
     _globalFullPath = const_cast<char *>(GFileMgr::GetGlobalFullPath(_parent->GlobalFullPath(), _name));
-}
-
-bool GFile::RefreshFileSize()
-{
-    bool ret = false;
-    
-    struct stat tempStat;
-    stat(_globalFullPath, &tempStat);
-    if (_fileSize != tempStat.st_size)
-    {
-        _fileSize = tempStat.st_size;
-        ret = true;
-    }
-    
-    return ret;
 }
 
 void GFile::AppendChild(GFile * child_)
