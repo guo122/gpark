@@ -54,8 +54,8 @@
 #define SHA1_DIGEST_LENGTH     20
 #define FILE_NAMESIZE_LENGTH    4
 
-// len, id, parent_id, isFolder, fileSize, mtime, sha1, nameSize, (name)
-#define FILE_BASIC_LENGTH       FILE_FILESIZE_LENGTH + FILE_ID_LENGTH + FILE_ID_LENGTH + FILE_BOOL_LENGTH + FILE_FILESIZE_LENGTH + FILE_MTIME_LENGTH + SHA1_DIGEST_LENGTH + FILE_NAMESIZE_LENGTH
+// len, id, parent_id, isFolder, fileSize, mtime, sha1, nameSize, (name), isSoftLink, isFile
+#define FILE_BASIC_LENGTH       FILE_FILESIZE_LENGTH + FILE_ID_LENGTH + FILE_ID_LENGTH + FILE_BOOL_LENGTH + FILE_FILESIZE_LENGTH + FILE_MTIME_LENGTH + SHA1_DIGEST_LENGTH + FILE_NAMESIZE_LENGTH + FILE_BOOL_LENGTH + FILE_BOOL_LENGTH
 
 #define DB_VERSION_V1               1
 #define DB_VERSION_V2               2

@@ -39,12 +39,15 @@ public:
     void SetParent(GFile * parent_);
     void CopyFrom(GFile * file_);
     void GenFullPath();
+    bool RefreshFileSize(); // return is file change.
     void AppendChild(GFile * child_);
     void RemoveChild(GFile * child_, bool bRemoveAllChildren = false);
     bool IsSamePath(GFile * file_);
     bool IsDifferent(GFile * file_);
     bool IsChild(GFile * file_);
+    bool IsFile();
     bool IsFolder();
+    bool IsSoftLink();
     void SortChildren();
     bool IsNeedCalSha();
     void CalShaPreInfo(char * outputLog);
@@ -63,7 +66,9 @@ private:
     char *          _globalFullPath;
     char *          _name;
     bool            _bGenShaed;
+    bool            _bFile;
     bool            _bFolder;
+    bool            _bSoftLink;
     size_t          _fileSize;
     long            _mTimestamp;
     unsigned char   _sha[SHA1_DIGEST_LENGTH];

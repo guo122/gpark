@@ -1,11 +1,16 @@
 
 # GPark Roadmap
 
+## v1.4
+
+- [ ] auto sync version number to CMakeLists.
+
 ## v1.3
 
 - [ ] refactor common class of tools.
 - [ ] improve help option and README.
 - [ ] ignore files by suffix.
+- [ ] first just only calculate big file sha1, such as file size larger than memory, to avoid memory page as much as possible.
 
 ## v1.2
 

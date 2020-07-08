@@ -18,7 +18,9 @@ GFile::GFile()
     , _globalFullPath(nullptr)
     , _name(nullptr)
     , _bGenShaed(false)
+    , _bFile(false)
     , _bFolder(false)
+    , _bSoftLink(false)
     , _fileSize(0)
     , _mTimestamp(0)
 {
@@ -30,7 +32,9 @@ GFile::GFile(GFile * parent_, const char * globalFullPath_, struct dirent * dire
     , _globalFullPath(const_cast<char *>(globalFullPath_))
     , _name(nullptr)
     , _bGenShaed(false)
+    , _bFile(false)
     , _bFolder(false)
+    , _bSoftLink(false)
     , _fileSize(0)
     , _mTimestamp(0)
 {
@@ -46,13 +50,27 @@ GFile::GFile(GFile * parent_, const char * globalFullPath_, struct dirent * dire
         _name = new char[dirent_->d_namlen + 1];
         strncpy(_name, dirent_->d_name, dirent_->d_namlen);
         _name[dirent_->d_namlen] = 0;
+        
+        if (dirent_->d_type == DT_DIR)
+        {
+            _bFolder = true;
+        }
+        else if (dirent_->d_type == DT_LNK)
+        {
+            _bSoftLink = true;
+        }
+        else if (dirent_->d_type == DT_REG)
+        {
+            _bFile = true;
+        }
     }
     
     struct stat tempStat;
     stat(_globalFullPath, &tempStat);
-    _bFolder = S_ISDIR(tempStat.st_mode);
     _fileSize = tempStat.st_size;
     _mTimestamp = tempStat.st_mtimespec.tv_sec;
+
+//    S_ISDIR(tempStat.st_mode)
 }
 
 GFile::~GFile()
@@ -68,7 +86,7 @@ size_t GFile::FromBin(char * data_, char * digestBuffer_, long * parent_id_)
     char * digestData = data_;
     char * buffer = new char[FILE_FILESIZE_LENGTH];
     
-    // len, id, parent_id, isFolder, fileSize, mtime, sha1, nameSize, (name)
+    // len, id, parent_id, isFolder, fileSize, mtime, sha1, nameSize, (name), isSoftLink, isFile
     memcpy(buffer, data_, FILE_FILESIZE_LENGTH);
     data_ += FILE_FILESIZE_LENGTH;
     size_t ret = *((size_t*)buffer);
@@ -104,6 +122,14 @@ size_t GFile::FromBin(char * data_, char * digestBuffer_, long * parent_id_)
     memcpy(_name, data_, nameSize);
     data_ += nameSize;
     _name[nameSize] = 0;
+    // isSoftLink
+    memcpy(buffer, data_, FILE_BOOL_LENGTH);
+    data_ += FILE_BOOL_LENGTH;
+    _bSoftLink = *((bool*)buffer);
+    // isFile
+    memcpy(buffer, data_, FILE_BOOL_LENGTH);
+    data_ += FILE_BOOL_LENGTH;
+    _bFile = *((bool*)buffer);
     
     delete [] buffer;
     _bGenShaed = true;
@@ -132,13 +158,21 @@ size_t GFile::FromBin(char * data_, char * digestBuffer_, long * parent_id_)
     memcpy(digestBuffer_, digestData, nameSize);
     digestBuffer_ += nameSize;
     digestData += nameSize;
+    // isSoftLink
+    memcpy(digestBuffer_, digestData, FILE_BOOL_LENGTH);
+    digestBuffer_ += FILE_BOOL_LENGTH;
+    digestData += FILE_BOOL_LENGTH;
+    // isSoftLink
+    memcpy(digestBuffer_, digestData, FILE_BOOL_LENGTH);
+    digestBuffer_ += FILE_BOOL_LENGTH;
+    digestData += FILE_BOOL_LENGTH;
     
     return ret;
 }
 
 size_t GFile::ToBin(char * buffer_, char * digestBuffer_)
 {
-    // len, id, parent_id, isFolder, fileSize, mtime, sha1, nameSize, (name)
+    // len, id, parent_id, isFolder, fileSize, mtime, sha1, nameSize, (name), isSoftLink, isFile
     size_t ret = CheckBinLength();
     
     size_t nameSize = 0;
@@ -174,6 +208,12 @@ size_t GFile::ToBin(char * buffer_, char * digestBuffer_)
     // name
     memcpy(buffer_, _name, nameSize);
     buffer_ += nameSize;
+    // isSoftLink
+    memcpy(buffer_, (char *)&(_bSoftLink), FILE_BOOL_LENGTH);
+    buffer_ += FILE_BOOL_LENGTH;
+    // isFile
+    memcpy(buffer_, (char *)&(_bFile), FILE_BOOL_LENGTH);
+    buffer_ += FILE_BOOL_LENGTH;
     
     // len
     memcpy(digestBuffer_, (char *)&ret, FILE_FILESIZE_LENGTH);
@@ -193,6 +233,12 @@ size_t GFile::ToBin(char * buffer_, char * digestBuffer_)
     // name
     memcpy(digestBuffer_, _name, nameSize);
     digestBuffer_ += nameSize;
+    // isSoftLink
+    memcpy(digestBuffer_, (char *)&(_bSoftLink), FILE_BOOL_LENGTH);
+    digestBuffer_ += FILE_BOOL_LENGTH;
+    // isFile
+    memcpy(digestBuffer_, (char *)&(_bFile), FILE_BOOL_LENGTH);
+    digestBuffer_ += FILE_BOOL_LENGTH;
     
     return ret;
 }
@@ -204,7 +250,6 @@ size_t GFile::CheckBinLength()
     {
         ret = strlen(_name);
     }
-    // len, id, parent_id, fileSize, mtime, sha1, nameSize, (name)
     ret += FILE_BASIC_LENGTH;
     
     return ret;
@@ -273,7 +318,9 @@ void GFile::CopyFrom(GFile * file_)
 {
     _bGenShaed = file_->_bGenShaed;
     memcpy(_sha, file_->Sha(), SHA1_DIGEST_LENGTH);
+    _bFile = file_->IsFile();
     _bFolder = file_->IsFolder();
+    _bSoftLink = file_->IsSoftLink();
     _fileSize = file_->FileSize();
     _mTimestamp = file_->MTimestamp();
 }
@@ -281,6 +328,21 @@ void GFile::CopyFrom(GFile * file_)
 void GFile::GenFullPath()
 {
     _globalFullPath = const_cast<char *>(GFileMgr::GetGlobalFullPath(_parent->GlobalFullPath(), _name));
+}
+
+bool GFile::RefreshFileSize()
+{
+    bool ret = false;
+    
+    struct stat tempStat;
+    stat(_globalFullPath, &tempStat);
+    if (_fileSize != tempStat.st_size)
+    {
+        _fileSize = tempStat.st_size;
+        ret = true;
+    }
+    
+    return ret;
 }
 
 void GFile::AppendChild(GFile * child_)
@@ -339,9 +401,19 @@ bool GFile::IsChild(GFile * file_)
     return ret;
 }
 
+bool GFile::IsFile()
+{
+    return _bFile;
+}
+
 bool GFile::IsFolder()
 {
     return _bFolder;
+}
+
+bool GFile::IsSoftLink()
+{
+    return _bSoftLink;
 }
 
 void GFile::SortChildren()
@@ -355,7 +427,7 @@ void GFile::SortChildren()
 
 bool GFile::IsNeedCalSha()
 {
-    bool ret = !_bGenShaed && _name != nullptr && !_bFolder;
+    bool ret = !_bGenShaed && _name != nullptr && !_bFolder && !_bSoftLink;
     return ret;
 }
 
@@ -373,13 +445,13 @@ void GFile::CalSha()
         _bGenShaed = true;
         
         GAssert(_globalFullPath, "has no full path.");
-        
+
         std::ifstream ifile;
         ifile.open(_globalFullPath, std::ios::in | std::ios::binary);
         char * buffer = new char[_fileSize];
         ifile.read(buffer, _fileSize);
         ifile.close();
-
+        
         GTools::CalculateSHA1(buffer, _fileSize, _sha);
         
         delete[] buffer;

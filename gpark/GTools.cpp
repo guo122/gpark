@@ -191,9 +191,13 @@ unsigned int GTools::HardwareThreadNum()
 unsigned int GTools::GetRecommendThreadNum(unsigned int expectThreadNum_, int ratio_)
 {
     unsigned int ret = std::thread::hardware_concurrency();
-    if (expectThreadNum_ == 0 || expectThreadNum_ > ret)
+    if (expectThreadNum_ == 0)
     {
         ret = (ret / 2) * ratio_;
+    }
+    else if (expectThreadNum_ > (ret * 8))
+    {
+        ret = ret * 8;
     }
     else
     {

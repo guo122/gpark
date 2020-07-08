@@ -5,7 +5,7 @@
 
 #define VERSION_MAJOR       "1"
 #define VERSION_MINOR       "1"
-#define VERSION_PATCH       "4"
+#define VERSION_PATCH       "5"
 #define MAIN_VERSION        "v" VERSION_MAJOR "." VERSION_MINOR "." VERSION_PATCH
 
 #define DB_VERSION          DB_VERSION_V2
