@@ -4,6 +4,7 @@
 ## v1.4
 
 - [ ] auto sync version number to CMakeLists.
+- [ ] history.
 
 ## v1.3
 
